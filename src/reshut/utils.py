@@ -4,41 +4,11 @@
 import base64
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
-from enum import StrEnum, unique
 import secrets
 import jwt
 from typing import Any, Optional
 
-
-@unique
-class Algorithm(StrEnum):
-    """
-    Enumeration of Algorithms that can be used for tokenizing claims.
-    """
-    HS256 = 'HS256'
-    """HMAC (256-bit, symmetric, fastest)"""
-    HS384 = 'HS384'
-    """HMAC (384-bit, symmetric, fastest)"""
-    HS512 = 'HS512'
-    """HMAC (512-bit, symmetric, fastest)"""
-    RS256 = 'RS256'
-    """RSA (256-bit, asymmetric, slow)"""
-    RS384 = 'RS384'
-    """RSA (384-bit, asymmetric, slow)"""
-    RS512 = 'RS512'
-    """RSA (512-bit, asymmetric, slow)"""
-    ES256 = 'ES256'
-    """Elliptic-curve (256-bit, asymmetric, fast)"""
-    ES384 = 'ES384'
-    """Elliptic-curve (384-bit, asymmetric, fast)"""
-    ES512 = 'ES512'
-    """Elliptic-curve (512-bit, asymmetric, fast)"""
-    ED25519 = 'ED25519'
-    """Edwards-curve (256-bit, asymmetric, faster)"""
-    ED448 = 'ED448'
-    """Edwards-curve (448-bit, asymmetric, faster)"""
-    def __str__(self) -> str:
-        return self.value    
+from .Algorithm import Algorithm
 
 def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> tuple[str,str|None]:
     """
@@ -170,3 +140,10 @@ def validate(algorithm:Algorithm, public_key:str, token:str, *, audience:Optiona
                 return jwt.decode(token, public_key, algorithms=[algorithm.value], audience=audience, issuer=issuer)
     except Exception as ex:
         raise Exception()
+
+
+__all__ = [
+    'keygen',
+    'tokenize',
+    'validate'
+]
