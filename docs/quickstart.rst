@@ -25,7 +25,7 @@ following example:
 
 .. code-block:: python
 
-   import falcon
+   import falcon.asgi as asgi
    from reshut import middleware, utils
    from .api.v3.FakeApi import FakeApi
 
@@ -37,8 +37,8 @@ following example:
    asymmetric_key = utils.keygen(Algorithm.ED448)
    app.add_middleware(
        middleware.AsgiAuthorizationMiddleware(
-           apikey_evaluater=TokenEvaluator(Algorithm.HS256, symmetric_key),
-           bearer_evaluater=TokenEvaluator(Algorithm.ED448, asymmetric_key),
+           apikey_evaluater=middleware.TokenEvaluator(Algorithm.HS256, symmetric_key),
+           bearer_evaluater=middleware.TokenEvaluator(Algorithm.ED448, asymmetric_key),
        )
    )
 
@@ -52,7 +52,6 @@ least one handler to customise Authorization:
 
 .. code-block:: python
 
-   import falcon
    from reshut.authorization import (
        allow_anonymous,
        allow_claim,
