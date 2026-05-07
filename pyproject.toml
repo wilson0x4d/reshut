@@ -27,5 +27,13 @@ dev = [
     "punit (>=1.3.7,<2.0.0)",
     "twine"
 ]
+
+[tool.setuptools.data-files]
+bin = [
+    ".scripts/reshut-keygen",
+    ".scripts/reshut-tokenize",
+    ".scripts/reshut-validate"
+]
+
 [tool.setuptools.package-data]
 "reshut" = ["py.typed"]
