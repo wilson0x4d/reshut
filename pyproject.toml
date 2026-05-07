@@ -24,5 +24,6 @@ dev = [
     "coverage",
     "lxml-stubs==0.5.1",
     "mypy",
-    "punit (>=1.3.7,<2.0.0)"
+    "punit (>=1.3.7,<2.0.0)",
+    "twine"
 ]
