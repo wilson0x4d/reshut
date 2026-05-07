@@ -20,7 +20,7 @@ To use `reshut` two things must be done; first you must add an authorization mid
 ```python
 
     import falcon.asgi as asgi
-    from reshut import middleware, utils
+    from reshut import Algorithm, middleware, utils
     from .api.v3.FakeApi import FakeApi
 
     # you create a falcon app
@@ -29,8 +29,8 @@ To use `reshut` two things must be done; first you must add an authorization mid
     symmetric_key = utils.keygen(Algorithm.HS256)
     asymmetric_key = utils.keygen(Algorithm.ED448)
     app.add_middleware(middleware.AsgiAuthorizationMiddleware(
-        apikey_evaluater=middleware.TokenEvaluator(Algorithm.HS256, key),
-        bearer_evaluater=middleware.TokenEvaluator(Algorithm.ED448, key)
+        apikey_evaluater=middleware.TokenEvaluator(Algorithm.HS256, symmetric_key),
+        bearer_evaluater=middleware.TokenEvaluator(Algorithm.ED448, asymmetric_key)
     ))
     # you add some routes to your app
     app.add_route('/api/v3/fakes', api.v3.FakeApi())

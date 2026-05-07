@@ -26,7 +26,7 @@ following example:
 .. code-block:: python
 
    import falcon.asgi as asgi
-   from reshut import middleware, utils
+   from reshut import Algorithm, middleware, utils
    from .api.v3.FakeApi import FakeApi
 
    # you create a falcon app
