@@ -19,7 +19,7 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
 
     __authorization_evaluator:AuthorizationEvaluator
 
-    def __init__(self, apikey_token_evaluator:Optional[TokenEvaluator], basic_token_evaluator:Optional[TokenEvaluator], bearer_token_evaluator:Optional[TokenEvaluator]) -> None:
+    def __init__(self, apikey_token_evaluator:Optional[TokenEvaluator] = None, basic_token_evaluator:Optional[TokenEvaluator] = None, bearer_token_evaluator:Optional[TokenEvaluator] = None) -> None:
         self.__authorization_evaluator = AuthorizationEvaluator(apikey_token_evaluator=apikey_token_evaluator, basic_token_evaluator=basic_token_evaluator, bearer_token_evaluator=bearer_token_evaluator)
 
     async def process_resource(self, req:falcon.Request, resp:falcon.Response, resource:object, params: Mapping[str, Any]) -> None:

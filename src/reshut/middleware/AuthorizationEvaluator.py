@@ -18,9 +18,9 @@ class AuthorizationEvaluator:
 
     def __init__(
             self,
-            apikey_token_evaluator:Optional[TokenEvaluator],
-            basic_token_evaluator:Optional[TokenEvaluator],
-            bearer_token_evaluator:Optional[TokenEvaluator]
+            apikey_token_evaluator:Optional[TokenEvaluator] = None,
+            basic_token_evaluator:Optional[TokenEvaluator] = None,
+            bearer_token_evaluator:Optional[TokenEvaluator] = None
         ) -> None:
         self.__apikey_token_evaluator = apikey_token_evaluator
         self.__basic_token_evaluator = basic_token_evaluator
@@ -69,10 +69,11 @@ class AuthorizationEvaluator:
                     description=f'Scheme "{scheme}" not supported.',
                 )
         # reject.
-        raise falcon.HTTPUnauthorized(
-            title='Authorization Failed',
-            description='Unsuccessful',
-        )
+        if self.__apikey_token_evaluator is not None or self.__basic_token_evaluator is not None or self.__bearer_token_evaluator is not None:
+            raise falcon.HTTPUnauthorized(
+                title='Authorization Failed',
+                description='Unsuccessful',
+            )
 
 
 __all__ = [
