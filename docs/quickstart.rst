@@ -1,11 +1,9 @@
 Quick Start
-============
+===========
 .. _quickstart:
 
-.. contents::
-
 Installation
-============
+------------
 
 You can install ``reshut`` from `PyPI <https://pypi.org/project/reshut/>`_ through the usual means, such as ``pip``:
 
@@ -15,7 +13,7 @@ You can install ``reshut`` from `PyPI <https://pypi.org/project/reshut/>`_ throu
 
 
 Usage
-=====
+-----
 
 To use ``reshut`` two things must be done; first you must add an authorization middleware, and second you must apply one or more authorization decorators to a request handler.  Consider the following example:
 
@@ -87,12 +85,12 @@ Elsewhere in your project, you defined ``FakeApi`` and decorated at least one ha
            pass
 
 
-In the above example:
+In the example above:
 
-* ``@allow_anonymous`` will grant access to all callers, authenticated or not.
-* ``@allow_claim`` specifies which claims will grant access; **at least one** of them must be satisfied by the request.
-* ``@deny_claim`` specifies which claims will deny access.
-* ``@require_claim`` specifies which claims are required for “access granted”; **ALL** specified claims must be satisfied by the request or access is denied.
+* ``@allow_anonymous`` – grants access to every caller, whether authenticated or not.
+* ``@allow_claim`` – lists the claims that *may* grant access; **at least one** of the listed claims must be present in the request.
+* ``@deny_claim`` – lists the claims that *will* deny access if they appear in the request.
+* ``@require_claim`` – lists the claims that *must* be present for access to be granted; **all** of the specified claims must be satisfied, otherwise access is denied.
 
 All authorization decorators optionally allow matching a specific literal value or a Claim Evaluator function (seen in the example above as ``lambda`` syntax.)
 
@@ -100,75 +98,84 @@ Claim Evaluator functions are useful for checking complex claim types like dates
 
 
 Generating Keys, Tokenizing Claims, and Validating Tokens
-=========================================================
+---------------------------------------------------------
 
-If you need to generate keys there is a CLI tool ``reshut-keygen`` you can use:
+**reshut** provides both CLI tools (bash scripts) and Python utilities (functions).
+
+via ``bash``
+~~~~~~~~~~~~
 
 .. code-block:: bash
 
-    # these generate PRIVATE KEYS only to be used
-    # by you or your organization. they are NOT to be
-    # shared with a third party.
+    # PREPARE: you can either pull the git repo
+    git clone https://github.com/wilson0x4d/reshut.git
+    cd reshut
+    source .scripts/init-venv
+
+    # PREPARE: or you can pull the PyPI package
+    mkdir workspace
+    cd workspace
+    python -m venv venv-reshut
+    venv-reshut/bin/activate
+    pip install reshut
+
+    # `reshut-keygen` generates PRIVATE KEYS only to be
+    # used by you or your organization. they are NOT
+    # meant for sharing with a third party.
 
     # generate an hs256 secret, output is written
-    # to a single "my_symmetric_key.jwk" file
+    # to a single "my_symmetric_key.jwk" file:
     reshut-keygen --type HS256 --output my_symmetric_key
 
     # generate an rs256 keypair, outputs are written
-    # to a single "my_asymmetric_key.jwk"
+    # to a single "my_asymmetric_key.jwk":
     reshut-keygen --type RS256 --output my_asymmetric_key
 
-    # the --output argument may specify a path; the last part of the path
-    # is always taken as a filename base.
+    # in the above examples, the `--output` argument may
+    # specify a path; absolute or relative, where the last
+    # part of the path is always taken as a filename base.
+
+    # `reshut-tokenize` creates a SHARED TOKEN meant to
+    # be provided to a third party such as developers, testers,
+    # or business partners/integrators for auth purposes:
+    reshut-tokenize --key key.jwk --claims '{"foo":"bar"}'
+
+    # (the token will be printed to stdout)
+
+    # `reshut-validate` accepts a key and a token:
+    reshut-validate --key key.jwk --token 'the_token'
+
+    # (the claims will be printed to stdout)
 
 
-There is also a ``reshut-tokenize`` tool you can use to tokenize claims:
+via Python
+~~~~~~~~~~
 
-.. code-block:: bash
-
-    # this generates a SHARED TOKEN meant to be provided
-    # to a third party such as developers, testers,
-    # or business partners/integrators for authorization.
-    reshut-tokenize --type HS256 --key my_symmetric_key.jwk --claims '{"foo":"bar"}'
-    # the token will be printed to stdout
-
-Lastly, there is a ``reshut-validate`` tool you can use to validate tokens:
-
-.. code-block:: bash
-
-    reshut-validate --key my_symmetric_key.jwk --token 'the_token'
-    # the claims will be formatted as JSON and printed to stdout
-
-
-These tools are written using the ``reshut.utils`` namespace; you can use the ``utils`` namespace within your own code to dynamically allocate keys and tokens as you see fit (instead of dropping to a shell for the same result).
-
-For example, here is a snippet demonstrating the generation of an ``ed448`` keypair and also an ``ed448`` token valid for that keypair:
+In a Python script you can import utility functions from the ``reshut.utils`` namespace to generate keys, tokenize claims, and validate tokens.
 
 .. code-block:: python
 
-    from datetime import datetime, timedelta
-    from reshut.utils import Algorithm, keygen, tokenize, validate
+    from reshut import Algorithm, utils
 
-    # on the server/etc, generate keys
-    ed448_key = keygen(Algorithm.ED448)
+    # generate keys:
+    ed448_key = utils.keygen(Algorithm.ED448)
     print(ed448_key)
 
-    # issue “secure” claims (claims the recipient can see/verify, but cannot modify)
-    token = tokenize(
+    # tokenize claims:
+    token = utils.tokenize(
         ed448_key,
         {
             'sub': 'Subject',
-            'iss': 'Issuer',
-            'exp': datetime.now() + timedelta(days=90),
-        },
+            'iss': 'Issuer'
+        }
     )
     print(token)
 
-    # validate the token
-    claims = validate(ed448_key, token)
+    # validate a token:
+    claims = utils.validate(ed448_key, token)
     print(claims)
 
-    # individual claims can then be verified.  These examples are only really
-    # useful if you are automating key issuance, token issuance, are a
-    # third-party that needs to generate a complex/symmetric token on-demand,
+    # individual claims can then be verified.  These examples
+    # are only really useful if you are automating issuance,
+    # are a third-party that needs to generate a token on-demand,
     # or are implementing a custom token validator.

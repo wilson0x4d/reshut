@@ -7,5 +7,6 @@ Reference
 
    reshut
    reshut.authorization
+   reshut.jwk
    reshut.middleware
    reshut.utils

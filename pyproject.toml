@@ -24,7 +24,6 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "coverage",
-    "lxml-stubs==0.5.1",
     "mypy",
     "punit (>=1.4)",
     "twine"
