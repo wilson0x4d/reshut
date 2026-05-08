@@ -155,7 +155,6 @@ For example, here is a snippet demonstrating the generation of an ``ed448`` keyp
 
     # issue “secure” claims (claims the recipient can see/verify, but cannot modify)
     token = tokenize(
-        Algorithm.ED448,
         ed448_key,
         {
             'sub': 'Subject',
@@ -166,7 +165,7 @@ For example, here is a snippet demonstrating the generation of an ``ed448`` keyp
     print(token)
 
     # validate the token
-    claims = validate(ed448_pubkey, token)
+    claims = validate(ed448_key, token)
     print(claims)
 
     # individual claims can then be verified.  These examples are only really

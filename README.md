@@ -149,7 +149,7 @@ token = tokenize(ed448_key, {
 })
 print(token)
 
-claims = validate(ed448_key.pub, token)
+claims = validate(ed448_key, token)
 print(claims)
 
 # individual claims can then be verified.  these examples are only really useful
