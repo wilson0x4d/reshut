@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: © 2026 Shaun Wilson
 # SPDX-License-Identifier: MIT
 
+from datetime import datetime, timedelta, timezone
 import uuid
 from punit import fact, theory, inlinedata, collections, exceptions
 from reshut.utils import Algorithm, keygen, tokenize, validate
@@ -53,9 +54,11 @@ def utils_bvt(algorithm: Algorithm) -> None:
         sort=True
     ), f'Algorithm {algorithm!s}: decoded claims differ from the original'
 
+
 @fact
 def keygen_when_invalid_algo_then_raise_NotImplementedError() -> None:
     assert exceptions.raises[NotImplementedError](lambda: keygen(cast(Algorithm, 'invalid')))
+
 
 @fact
 def tokenize_when_mismatched_audience_then_raise_Exception() -> None:
@@ -65,6 +68,7 @@ def tokenize_when_mismatched_audience_then_raise_Exception() -> None:
     claims = validate(Algorithm.HS256, key, token)
     assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, audience='not-matching-audience'))
 
+
 @fact
 def tokenize_when_mismatched_issuer_then_raise_Exception() -> None:
     expected_value = uuid.uuid4().hex
@@ -72,6 +76,23 @@ def tokenize_when_mismatched_issuer_then_raise_Exception() -> None:
     token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=expected_value)
     claims = validate(Algorithm.HS256, key, token)
     assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, issuer='not-matching-issuer'))
+
+
+@fact
+def tokenize_when_mismatched_subject_then_raise_Exception() -> None:
+    expected_value = uuid.uuid4().hex
+    key, _ = keygen(Algorithm.HS256)
+    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, subject=expected_value)
+    claims = validate(Algorithm.HS256, key, token)
+    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, subject='not-matching-audience'))
+
+
+@fact
+def tokenize_when_before_nbt_then_raise_Exception() -> None:
+    key, _ = keygen(Algorithm.HS256)
+    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, not_before=int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()))
+    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token))
+
 
 @fact
 def tokenize_can_inject_audience() -> None:
@@ -81,6 +102,7 @@ def tokenize_can_inject_audience() -> None:
     claims = validate(Algorithm.HS256, key, token)
     assert claims.get('aud', None) == expected_value, f'resulting token did not have expected `aud` claim: {claims}'
 
+
 @fact
 def tokenize_can_inject_issuer() -> None:
     expected_value = uuid.uuid4().hex
@@ -89,7 +111,70 @@ def tokenize_can_inject_issuer() -> None:
     claims = validate(Algorithm.HS256, key, token)
     assert claims.get('iss', None) == expected_value, f'resulting token did not have expected `iss` claim: {claims}'
 
+
 @fact
 def tokenize_fails_on_invaliud_algo() -> None:
     key, _ = keygen(Algorithm.HS256)
     assert exceptions.raises[Exception](lambda: tokenize(Algorithm.RS256, key, { 'foo': 'bar'}))
+
+
+@theory
+@inlinedata(True, True, True, True, True, True)
+@inlinedata(True, True, True, True, True, False)
+@inlinedata(True, True, True, True, False, False)
+@inlinedata(True, True, True, False, False, False)
+@inlinedata(True, True, False, False, False, False)
+@inlinedata(True, False, False, False, False, False)
+@inlinedata(False, False, False, False, False, False)
+def standard_claims_unenforced(iss:bool, sub:bool, aud:bool, exp:bool, iat:bool, jti:bool) -> None:
+    """
+    runs permutations of "standard" claims to verify expected functionality
+    """
+    enforce:bool = False
+    issuer:str|None = uuid.uuid4().hex if iss else None
+    subject:str|None = uuid.uuid4().hex if sub else None
+    audience:str|None = uuid.uuid4().hex if aud else None
+    expiry:int|None = int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()) if exp else None
+    issued_at:int|None = int(datetime.now(timezone.utc).timestamp()) if iat else None
+    token_id:str|None = uuid.uuid4().hex if jti else None
+
+    key, _ = keygen(Algorithm.HS256)
+    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
+    claims = validate(Algorithm.HS256, key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
+    assert not iss or claims.get('iss') == issuer
+    assert not sub or claims.get('sub') == subject
+    assert not aud or claims.get('aud') == audience
+    assert not exp or claims.get('exp') == expiry
+    assert claims.get('iat') is not None and (not iat or claims.get('iat') == issued_at)
+    assert not jti or claims.get('jti') == token_id
+
+
+@theory
+@inlinedata(True, True, True, True, True, True)
+@inlinedata(True, True, True, True, True, False)
+@inlinedata(True, True, True, True, False, False)
+@inlinedata(True, True, True, False, False, False)
+@inlinedata(True, True, False, False, False, False)
+@inlinedata(True, False, False, False, False, False)
+@inlinedata(False, False, False, False, False, False)
+def standard_claims_enforced(iss:bool, sub:bool, aud:bool, exp:bool, iat:bool, jti:bool) -> None:
+    """
+    runs permutations of "standard" claims to verify expected functionality
+    """
+    enforce:bool = True
+    issuer:str|None = uuid.uuid4().hex if iss else None
+    subject:str|None = uuid.uuid4().hex if sub else None
+    audience:str|None = uuid.uuid4().hex if aud else None
+    expiry:int|None = int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()) if exp else None
+    issued_at:int|None = int(datetime.now(timezone.utc).timestamp()) if iat else None
+    token_id:str|None = uuid.uuid4().hex if jti else None
+
+    key, _ = keygen(Algorithm.HS256)
+    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
+    claims = validate(Algorithm.HS256, key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
+    assert not iss or claims.get('iss') == issuer
+    assert not sub or claims.get('sub') == subject
+    assert not aud or claims.get('aud') == audience
+    assert not exp or claims.get('exp') == expiry
+    assert claims.get('iat') is not None and (not iat or claims.get('iat') == issued_at)
+    assert not jti or claims.get('jti') == token_id

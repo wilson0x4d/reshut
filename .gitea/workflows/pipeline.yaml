@@ -13,7 +13,7 @@ on:
 jobs:
   package-and-deploy:
     name: "Package & Deploy"
-    runs-on: builder-py314
+    runs-on: builder-py311
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,7 +24,7 @@ jobs:
           export SEMVER=$(conventional-semver)
           echo "SEMVER=$SEMVER" >> "$GITHUB_ENV"
           echo "PYPI_REPO=${{ vars.PYPI_REPO }}" >> "$GITHUB_ENV"
-          .scripts/init-venv
+          PYTHON_VERSION=3.11 .scripts/init-venv
       - name: "Test"
         id: run-tests
         run: |
