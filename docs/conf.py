@@ -25,7 +25,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',       # nice summary tables
     'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',     # type‑hint rendering
+    'sphinx_autodoc_typehints',     # type-hint rendering
     'sphinx_rtd_theme'
 ]
 

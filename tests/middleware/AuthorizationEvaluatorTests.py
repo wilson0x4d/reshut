@@ -59,14 +59,14 @@ def evaluate_apikey_successful() -> None:
         basic_token_evaluator=None,
         bearer_token_evaluator=None,
     )
-    request = cast(falcon.Request, _DummyRequest(headers={'X-API-Key': 'valid‑apikey'}))
+    request = cast(falcon.Request, _DummyRequest(headers={'X-API-Key': 'valid-apikey'}))
     handler = _DummyHandler()
 
     auth_evaluator.evaluate(request, handler)  # should not raise
 
     assert len(token_evaluator.calls) == 1
     token, deny, allow, require = token_evaluator.calls[0]
-    assert token == 'valid‑apikey'
+    assert token == 'valid-apikey'
     assert deny == {}
     assert allow == {}
     assert require == {}
@@ -132,7 +132,7 @@ def when_unsupported_scheme_then_httpbadrequest() -> None:
         basic_token_evaluator=None,
         bearer_token_evaluator=None,
     )
-    request = cast(falcon.Request, _DummyRequest(headers={'Authorization': 'Digest some‑token'}))
+    request = cast(falcon.Request, _DummyRequest(headers={'Authorization': 'Digest some-token'}))
     handler = _DummyHandler()
 
     assert exceptions.raises[falcon.HTTPBadRequest](
@@ -149,7 +149,7 @@ def evaluate_evaluator_returns_false_raises_httpunauthorized() -> None:
         basic_token_evaluator=None,
         bearer_token_evaluator=None,
     )
-    request = cast(falcon.Request, _DummyRequest(headers={'X-API-Key': 'bad‑key'}))
+    request = cast(falcon.Request, _DummyRequest(headers={'X-API-Key': 'bad-key'}))
     handler = _DummyHandler()
 
     assert exceptions.raises[falcon.HTTPUnauthorized](

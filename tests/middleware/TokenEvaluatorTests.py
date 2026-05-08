@@ -3,21 +3,22 @@
 
 import falcon
 from punit import fact
+from reshut.jwk import Jwk
 from reshut.middleware import TokenEvaluator
 from reshut.utils import Algorithm, keygen, tokenize
 
+def __make_evaluator() -> tuple[TokenEvaluator, Jwk]:
+    key = keygen(Algorithm.HS256)
+    evaluator = TokenEvaluator(key)
+    return evaluator, key
 
-def __make_evaluator() -> tuple[TokenEvaluator, str]:
-    secret, _ = keygen(Algorithm.HS256)
-    evaluator = TokenEvaluator(Algorithm.HS256, secret)
-    return evaluator, secret
 
 @fact
 def allow_claim_matching():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     # allow_claims requires role == 'admin'
     allow = {'role': 'admin'}
@@ -27,12 +28,13 @@ def allow_claim_matching():
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Allowed claim should grant access'
 
+
 @fact
 def allow_claim_missing():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'user', 'user': 'bob'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     allow = {'role': 'admin'}   # we *require* admin, but token is just 'user'
     deny   = {}
@@ -47,12 +49,13 @@ def allow_claim_missing():
         assert exc.description == 'ALLOW'
         assert exc.title == 'Authorization Disallowed'
 
+
 @fact
 def deny_claim_exact_match():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'blocked': True}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     deny = {'blocked': True}    # any token with blocked=True must be denied
     allow = {}
@@ -64,6 +67,7 @@ def deny_claim_exact_match():
     except falcon.HTTPUnauthorized as exc:
         assert exc.description == 'DENY'
         assert exc.title == 'Authorization Denied'
+
 
 @fact
 def deny_claim_custom_evaluator():
@@ -78,7 +82,7 @@ def deny_claim_custom_evaluator():
     evaluator, secret = __make_evaluator()
     claims = {'score': 42}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     deny = {'score': GreaterThanTen()}
     allow = {}
@@ -91,12 +95,13 @@ def deny_claim_custom_evaluator():
         assert exc.description == 'DENY'
         assert exc.title == 'Authorization Denied'
 
+
 @fact
 def require_claim_missing():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     require = {'user': 'bob'}   # token does not contain 'user'
     deny = {}
@@ -109,12 +114,13 @@ def require_claim_missing():
         assert exc.description == 'REQUIRE'
         assert exc.title == 'Authorization Missing'
 
+
 @fact
 def require_claim_wrong_value():
     evaluator, secret = __make_evaluator()
     claims = {'user': 'alice'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     require = {'user': 'bob'}   # wrong value
     deny = {}
@@ -127,6 +133,7 @@ def require_claim_wrong_value():
         assert exc.description == 'REQUIRE'
         assert exc.title == 'Authorization Missing'
 
+
 @fact
 def require_claim_success():
     from reshut.authorization import ClaimEvaluator
@@ -138,7 +145,7 @@ def require_claim_success():
     evaluator, secret = __make_evaluator()
     claims = {'user': 'Alice'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     require = {'user': StartsWithA()}
     deny = {}
@@ -147,12 +154,13 @@ def require_claim_success():
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Required claim should allow access'
 
+
 @fact
 def full_flow_success():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob', 'dept': 'sales'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     deny = {'blocked': False}                # not present → no deny
     require = {'role': 'admin'}              # matches
@@ -161,12 +169,13 @@ def full_flow_success():
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'All rules satisfied – should be granted'
 
+
 @fact
 def full_flow_deny_overrides():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob'}
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     deny = {'user': 'bob'}      # this matches → immediate denial
     require = {'role': 'admin'}
@@ -179,12 +188,13 @@ def full_flow_deny_overrides():
         assert exc.description == 'DENY'
         assert exc.title == 'Authorization Denied'
 
+
 @fact
 def full_flow_require_missing_overrides():
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin'}   # missing required 'user'
 
-    token = tokenize(Algorithm.HS256, secret, claims)
+    token = tokenize(secret, claims)
 
     deny = {}
     require = {'user': 'bob'}    # missing → denial

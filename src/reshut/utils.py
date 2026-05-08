@@ -1,25 +1,24 @@
 # SPDX-FileCopyrightText: © 2026 Shaun Wilson
 # SPDX-License-Identifier: MIT
 
-import base64
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
 from datetime import datetime, timezone
 import jwt
 from jwt.types import Options
 import secrets
-from typing import Any, Optional
+from typing import Any, Optional, cast
 from .Algorithm import Algorithm
+from .jwk import Jwk, EcJwk, OctetJwk, OkpJwk, RsaJwk, from_private_key, from_symmetric_key, to_private_key, to_public_key, to_symmetric_key
 
 
-def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> tuple[str,str|None]:    
+def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> Jwk:
     """
-    Generates a key (or keypair) for the specified algorithm.
+    Generates a key for the specified algorithm.
 
     :param algorithm: The algorithm to use.
     :param key_size: If provided, overrides the size of the generated key(s), in bits, if supported by the algorithm. Typically you would not do this.
     :raises NotImplementedError: Raised when an unsupported algorithm is specified.
-    :return: A tuple containing the key(s) that were generated. When returning a keypair the first value is the private key, the second value is the public key.
+    :return: A JWK representing the generated key.
     """
     match algorithm:
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
@@ -31,7 +30,10 @@ def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> tuple[str,str|
                         key_size = 384
                     case Algorithm.HS512:
                         key_size = 512
-            return (base64.b64encode(secrets.token_bytes(key_size)).decode('ascii'), None)
+            return from_symmetric_key(
+                algorithm,
+                secrets.token_bytes(key_size)
+            )
         case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
             if key_size is None:
                 match algorithm:
@@ -41,20 +43,13 @@ def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> tuple[str,str|
                         key_size = 3072
                     case Algorithm.RS512:
                         key_size = 4096
-            rsa_obj = rsa.generate_private_key(
-                public_exponent=65537,
-                key_size=key_size
+            return from_private_key(
+                algorithm,
+                rsa.generate_private_key(
+                    public_exponent=65537,
+                    key_size=key_size
+                )
             )
-            prikey_pem = rsa_obj.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()
-            ).decode('utf-8')
-            pubkey_pem = rsa_obj.public_key().public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode('utf-8')
-            return (prikey_pem, pubkey_pem)
         case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
             curve:ec.EllipticCurve
             match algorithm:
@@ -64,34 +59,20 @@ def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> tuple[str,str|
                     curve = ec.SECP384R1()
                 case Algorithm.ES512:
                     curve = ec.SECP521R1()
-            ec_obj = ec.generate_private_key(curve)
-            prikey_pem = ec_obj.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ).decode('utf-8')
-            pubkey_pem = ec_obj.public_key().public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            ).decode('utf-8')
-            return (prikey_pem, pubkey_pem)
+            return from_private_key(
+                algorithm,
+                ec.generate_private_key(curve)
+            )
         case Algorithm.ED25519 | Algorithm.ED448:
-            eddsa_obj = (ed25519.Ed25519PrivateKey if algorithm == Algorithm.ED25519 else ed448.Ed448PrivateKey).generate()
-            prikey_pem = eddsa_obj.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption(),
-            ).decode('utf-8')
-            pubkey_pem = eddsa_obj.public_key().public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo,
-            ).decode('utf-8')
-            return (prikey_pem, pubkey_pem)
+            return from_private_key(
+                algorithm,
+                (ed25519.Ed25519PrivateKey if algorithm == Algorithm.ED25519 else ed448.Ed448PrivateKey).generate()
+            )
         case _:
             raise NotImplementedError(f'Unsupported Algorithm "{algorithm}"')
 
 
-def tokenize(algorithm:Algorithm, private_key:str, claims:dict[str,Any],
+def tokenize(key:Jwk, claims:dict[str,Any],
         *,
         audience:Optional[str|list[str]] = None,
         issuer:Optional[str] = None,
@@ -104,7 +85,6 @@ def tokenize(algorithm:Algorithm, private_key:str, claims:dict[str,Any],
     """
     Tokenize the provided claims, optionally accepting standard JWT claims as args and injecting them anew on top of existing claims.
 
-    :param algorithm: The algorithm to use when signing the token.
     :param private_key: The private key (or secret) used for signing.
     :param claims: The claims to be tokenized.
     :param audience: Optional ``aud`` claim - a string or list of strings.
@@ -155,15 +135,18 @@ def tokenize(algorithm:Algorithm, private_key:str, claims:dict[str,Any],
     if len(inject_claims) > 0:
         claims |= inject_claims
     #
+    algorithm = Algorithm(key['alg'])
     match algorithm:
+        case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
+            return jwt.encode(claims, to_private_key(cast(EcJwk,key)), algorithm.value)
         case Algorithm.ED25519 | Algorithm.ED448:
-            return jwt.encode(claims, private_key, 'EdDSA')
+            return jwt.encode(claims, to_private_key(cast(OkpJwk,key)), 'EdDSA')
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            return jwt.encode(claims, base64.b64decode(private_key), algorithm.value)
-        case _:
-            return jwt.encode(claims, private_key, algorithm.value)
+            return jwt.encode(claims, to_symmetric_key(cast(OctetJwk,key)), algorithm.value)
+        case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
+            return jwt.encode(claims, to_private_key(cast(RsaJwk,key)), algorithm.value)
 
-def validate(algorithm:Algorithm, public_key:str, token:str,
+def validate(key:Jwk, token:str,
         *,
         enforce:bool = True,
         audience:Optional[str] = None,
@@ -177,9 +160,8 @@ def validate(algorithm:Algorithm, public_key:str, token:str,
 
     Other standard claims such as ``nbf`` and are automatically enforced unless ``enforce_claims=False`` is specified.
 
-    :param algorithm:   The algorithm that was used to sign the token.
     :param public_key:  The public key (or secret) used for verification.
-    :param token:       The compact‑serialization JWT string to be validated.
+    :param token:       The compact-serialization JWT string to be validated.
     :param enforce:     Indicates that "standard claims enforcement" should be performed, for example that ``exp`` is not validated before the indicated time or that ``exp`` is not in the past.
     :param audience:    Expected ``aud`` claim. Omit to skip validating ``aud`` claim.
     :param issuer:      Expected ``iss`` claim. Omit to skip validating ``iss`` claim.
@@ -202,13 +184,16 @@ def validate(algorithm:Algorithm, public_key:str, token:str,
         enforce_minimum_key_length=False
     )
     claims:dict[str,Any]
+    algorithm = Algorithm(key['alg'])
     match algorithm:
+        case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
+            return jwt.decode(token, to_public_key(cast(EcJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
         case Algorithm.ED25519 | Algorithm.ED448:
-            claims = jwt.decode(token, public_key, algorithms=['EdDSA'], audience=audience, issuer=issuer, options=options)
+            claims = jwt.decode(token, to_public_key(cast(OkpJwk,key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            claims = jwt.decode(token, base64.b64decode(public_key), algorithms=[algorithm.value], audience=audience, issuer=issuer, options=options)
-        case _:
-            claims = jwt.decode(token, public_key, algorithms=[algorithm.value], audience=audience, issuer=issuer, options=options)
+            claims = jwt.decode(token, to_symmetric_key(cast(OctetJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+        case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
+            claims = jwt.decode(token, to_public_key(cast(RsaJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
     if audience is not None:
         aud = claims.get('aud', None)
         if aud is None or (isinstance(aud, list) and audience not in aud) or aud != audience:

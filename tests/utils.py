@@ -4,6 +4,7 @@
 from datetime import datetime, timedelta, timezone
 import uuid
 from punit import fact, theory, inlinedata, collections, exceptions
+from reshut.jwk import Jwk
 from reshut.utils import Algorithm, keygen, tokenize, validate
 from typing import cast
 
@@ -24,27 +25,23 @@ def utils_bvt(algorithm: Algorithm) -> None:
     """
     For the supplied *algorithm*:
 
-    1. Generate a key (or key‑pair) with ``keygen``.
+    1. Generate a key (or key-pair) with ``keygen``.
     2. Encode a static claims dictionary with ``tokenize``.
     3. Decode the resulting JWT with ``validate``.
     4. Assert that the decoded claims are identical to the original claims.
     """
-    private_key, public_key = keygen(algorithm)
-
-    # symmetric algorithms return only a shared secret, so use it as `public_key`
-    if public_key is None:
-        public_key = private_key
+    key = keygen(algorithm)
 
     expected_claims = {
         'sub': '1234567890',
         'name': 'Alice Example',
         'admin': False,
-        'iat': 1700000000,          # a deterministic timestamp to avoid jitter
+        'iat': 1700000000,
     }
 
-    token = tokenize(algorithm, private_key, expected_claims)
+    token = tokenize(key, expected_claims)
 
-    actual_claims = validate(algorithm, public_key, token)
+    actual_claims = validate(key, token)
 
     assert collections.hasLength(actual_claims, len(expected_claims))
 
@@ -63,59 +60,53 @@ def keygen_when_invalid_algo_then_raise_NotImplementedError() -> None:
 @fact
 def tokenize_when_mismatched_audience_then_raise_Exception() -> None:
     expected_value = uuid.uuid4().hex
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, audience=expected_value)
-    claims = validate(Algorithm.HS256, key, token)
-    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, audience='not-matching-audience'))
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, audience=expected_value)
+    claims = validate(key, token)
+    assert exceptions.raises[Exception](lambda: validate(key, token, audience='not-matching-audience'))
 
 
 @fact
 def tokenize_when_mismatched_issuer_then_raise_Exception() -> None:
     expected_value = uuid.uuid4().hex
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=expected_value)
-    claims = validate(Algorithm.HS256, key, token)
-    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, issuer='not-matching-issuer'))
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, issuer=expected_value)
+    claims = validate(key, token)
+    assert exceptions.raises[Exception](lambda: validate(key, token, issuer='not-matching-issuer'))
 
 
 @fact
 def tokenize_when_mismatched_subject_then_raise_Exception() -> None:
     expected_value = uuid.uuid4().hex
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, subject=expected_value)
-    claims = validate(Algorithm.HS256, key, token)
-    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token, subject='not-matching-audience'))
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, subject=expected_value)
+    claims = validate(key, token)
+    assert exceptions.raises[Exception](lambda: validate(key, token, subject='not-matching-audience'))
 
 
 @fact
 def tokenize_when_before_nbt_then_raise_Exception() -> None:
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, not_before=int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()))
-    assert exceptions.raises[Exception](lambda: validate(Algorithm.HS256, key, token))
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, not_before=int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()))
+    assert exceptions.raises[Exception](lambda: validate(key, token))
 
 
 @fact
 def tokenize_can_inject_audience() -> None:
     expected_value = uuid.uuid4().hex
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, audience=expected_value)
-    claims = validate(Algorithm.HS256, key, token)
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, audience=expected_value)
+    claims = validate(key, token)
     assert claims.get('aud', None) == expected_value, f'resulting token did not have expected `aud` claim: {claims}'
 
 
 @fact
 def tokenize_can_inject_issuer() -> None:
     expected_value = uuid.uuid4().hex
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=expected_value)
-    claims = validate(Algorithm.HS256, key, token)
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, issuer=expected_value)
+    claims = validate(key, token)
     assert claims.get('iss', None) == expected_value, f'resulting token did not have expected `iss` claim: {claims}'
-
-
-@fact
-def tokenize_fails_on_invaliud_algo() -> None:
-    key, _ = keygen(Algorithm.HS256)
-    assert exceptions.raises[Exception](lambda: tokenize(Algorithm.RS256, key, { 'foo': 'bar'}))
 
 
 @theory
@@ -138,9 +129,9 @@ def standard_claims_unenforced(iss:bool, sub:bool, aud:bool, exp:bool, iat:bool,
     issued_at:int|None = int(datetime.now(timezone.utc).timestamp()) if iat else None
     token_id:str|None = uuid.uuid4().hex if jti else None
 
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
-    claims = validate(Algorithm.HS256, key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
+    claims = validate(key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
     assert not iss or claims.get('iss') == issuer
     assert not sub or claims.get('sub') == subject
     assert not aud or claims.get('aud') == audience
@@ -169,9 +160,9 @@ def standard_claims_enforced(iss:bool, sub:bool, aud:bool, exp:bool, iat:bool, j
     issued_at:int|None = int(datetime.now(timezone.utc).timestamp()) if iat else None
     token_id:str|None = uuid.uuid4().hex if jti else None
 
-    key, _ = keygen(Algorithm.HS256)
-    token = tokenize(Algorithm.HS256, key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
-    claims = validate(Algorithm.HS256, key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
+    key = keygen(Algorithm.HS256)
+    token = tokenize(key, { 'foo': 'bar'}, issuer=issuer, subject=subject, audience=audience, expiry=expiry, issued_at=issued_at, token_id=token_id)
+    claims = validate(key, token, enforce=enforce, audience=audience, issuer=issuer, subject=subject)
     assert not iss or claims.get('iss') == issuer
     assert not sub or claims.get('sub') == subject
     assert not aud or claims.get('aud') == audience

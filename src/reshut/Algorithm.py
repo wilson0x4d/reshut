@@ -34,6 +34,7 @@ class Algorithm(StrEnum):
     def __str__(self) -> str:
         return self.value    
 
+
 __all__ = [
     'Algorithm'
 ]

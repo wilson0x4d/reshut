@@ -9,6 +9,7 @@ __all__ = [
     '__version__', '__commit__',
     'Algorithm',
     'authorization',
+    'jwk',
     'middleware',
     'utils'
 ]

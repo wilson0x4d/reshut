@@ -4,6 +4,7 @@
 import inspect
 from typing import Any, Callable, Optional, TypeAlias, cast
 
+
 ClaimEvaluator:TypeAlias = Callable[[Any], bool]
 
 
@@ -17,6 +18,7 @@ def allow_anonymous(func:Callable[..., Any]) -> Callable[..., Any]:
     org = inspect.unwrap(func)
     setattr(org, '__reshut_noauth', True)
     return func
+
 
 def allow_claim(func:Callable[..., Any], claim_name:str, claim_check:Optional[Any|ClaimEvaluator] = None, is_required:bool = False) -> Callable[..., Any]:
     """
@@ -41,6 +43,7 @@ def allow_claim(func:Callable[..., Any], claim_name:str, claim_check:Optional[An
         allow_list[claim_name] = claim_check
     return func
 
+
 def deny_claim(func:Callable[..., Any], claim_name:str, claim_check:Optional[Any|ClaimEvaluator] = None) -> Callable[..., Any]:
     """
     Adds a DENY claim rule to a handler.
@@ -61,7 +64,8 @@ def deny_claim(func:Callable[..., Any], claim_name:str, claim_check:Optional[Any
         deny_list = cast(dict[str,Any],getattr(org, '__reshut_deny'))
         deny_list[claim_name] = claim_check
     return func
-    
+
+
 def require_claim(func:Callable[..., Any], claim_name:str, claim_check:Optional[Any|ClaimEvaluator] = None) -> Callable[..., Any]:
     """
     Adds a REQUIRED claim rule to a handler.

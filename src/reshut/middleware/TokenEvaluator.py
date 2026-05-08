@@ -4,7 +4,8 @@
 import falcon
 from typing import cast
 from ..authorization import ClaimEvaluator
-from ..utils import Algorithm, validate
+from ..jwk import Jwk
+from ..utils import validate
 
 
 class TokenEvaluator:
@@ -12,11 +13,9 @@ class TokenEvaluator:
     Evaluates a token given an Algorithm and Key.
     """
 
-    __algorithm:Algorithm
-    __key:str
+    __key:Jwk
 
-    def __init__(self, algorithm:Algorithm, key:str) -> None:
-        self.__algorithm = algorithm
+    def __init__(self, key:Jwk) -> None:
         self.__key = key
 
     def evaluate(
@@ -36,7 +35,7 @@ class TokenEvaluator:
         :raises falcon.HTTPUnauthorized: When claim rule checks fail.
         :return: A boolean indicating success or failure, on failure the calling code should raise an appopriate exception.
         """
-        claims = validate(self.__algorithm, self.__key, token)
+        claims = validate(self.__key, token)
         # check for denied claims (if any match, access denied)
         for k,claim_check in deny_claims.items():
             claim_value = claims.get(k, None)

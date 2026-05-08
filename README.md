@@ -29,8 +29,8 @@ To use `reshut` two things must be done; first you must add an authorization mid
     symmetric_key = utils.keygen(Algorithm.HS256)
     asymmetric_key = utils.keygen(Algorithm.ED448)
     app.add_middleware(middleware.AsgiAuthorizationMiddleware(
-        apikey_evaluater=middleware.TokenEvaluator(Algorithm.HS256, symmetric_key),
-        bearer_evaluater=middleware.TokenEvaluator(Algorithm.ED448, asymmetric_key)
+        apikey_evaluater=middleware.TokenEvaluator(symmetric_key),
+        bearer_evaluater=middleware.TokenEvaluator(asymmetric_key)
     ))
     # you add some routes to your app
     app.add_route('/api/v3/fakes', api.v3.FakeApi())
@@ -89,49 +89,44 @@ In the above example:
 
 All authorization decorators optionally allow matching a specific literal value or a Claim Evaluator function (seen in the example above as `lambda` syntax.)
 
-Claim Evaluator functions are useful for checking complex claim types like dates, dicts, lists, etc. while literal values are useful for checking well‑known/individual values.
+Claim Evaluator functions are useful for checking complex claim types like dates, dicts, lists, etc. while literal values are useful for checking well-known/individual values.
 
 ## Generating Keys, Tokenizing Claims, and Validating Tokens
 
 If you want to manually generate keys there is a CLI tool `reshut-keygen` you can use, convenient for developers, testers, and CI/CD pipelines that need ephemeral test assets:
 
 ```bash
-# these generate PRIVATE SECRETS only to be used
+# these generate PRIVATE KEYS only to be used
 # by you or your organization. they are NOT to be
 # shared with a third party.
 
-# generate an hs256 secret, output ios written
-# to a "my_secret.b64" file
-reshut-keygen --type RS256 --output my_secret
+# generate an hs256 secret, output is written
+# to a single "my_symmetric_key.jwk" file
+reshut-keygen --type HS256 --output my_symmetric_key
 
-# generate an rs256 keypair, outputs go to
-# separate PEM files named "my_rs256_public.pem"
-# and "my_rs256_private.pem"
-reshut-keygen --type RS256 --output my_rs256
+# generate an rs256 keypair, outputs are written
+# to a single "my_asymmetric_key.jwk"
+reshut-keygen --type RS256 --output my_asymmetric_key
 
 # the --output arg may specify a path, the last
 # part of the path is always taken as a filename base.
-
-# if you omit --output a default is derived from
-# the --type arg, ie "hs256.b64", "rs256_public.pem",
-# and "rs256_private.pem" for the examples above.
 ```
 
 There is also a `reshut-tokenize` tool you can use to tokenize claims:
 
 ```bash
-    # this generates a SHARED TOKEN meant to be provided
+    # this generates a token meant to be provided
     # to a third party such as developers, testers,
     # or business partners/integrators for authorization.
-
-    # tokenize claims
-    reshut-tokenize --type RS256 --key my_secret.b64 --claims '{"foo":"bar"}' --output shared_token.b64
+    reshut-tokenize --key key.jwk --claims '{"foo":"bar"}'
+    # the token will be printed to stdout
 ```
 
 Lastly, there is a `reshut-validate` tool you can use to validate tokens:
 
 ```bash
-    reshut-validate --type RS256 --key my_secret.b64 --claims '{"foo":"bar"}' --output shared_token.b64
+    reshut-validate --key key.jwk --token 'the_token'
+    # the claims will be formatted as JSON and printed to stdout
 ```
 
 These tools are written using the `reshut.utils` namespace, you can use the utils namespace within your own code to dynamically allocate keys and tokens as you see fit for your solution (instead of dropping to a shell for the same result).
@@ -143,19 +138,18 @@ For example, here is a snippet demonstrating the generation of an ed448 keypair 
 from reshut.utils import Algorithm, keygen, tokenize, validate
 
 # on the server/etc, generate keys
-ed448_prikey, ed448_pubkey = keygen(Algorithm.ED448)
-print(ed448_prikey)
-print(ed448_pubkey)
+ed448_key = keygen(Algorithm.ED448)
+print(ed448_key)
 
 # on the server/etc, issue "secure" claims (claims the recipient can see/verify, but cannot modify)
-token = tokenize(Algorithm.ED448, ed448_prikey, {
+token = tokenize(ed448_key, {
     sub: 'Subject',
     iss: 'Issuer',
     exp: datetime.now()+timedelta(days=90)
 })
 print(token)
 
-claims = validate(Algorithm.ED448, ed448_pubkey, token)
+claims = validate(ed448_key.pub, token)
 print(claims)
 
 # individual claims can then be verified.  these examples are only really useful
