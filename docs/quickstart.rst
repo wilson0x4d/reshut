@@ -7,8 +7,7 @@ Quick Start
 Installation
 ============
 
-You can install ``reshut`` from `PyPI <https://pypi.org/project/reshut/>`_ through the usual
-means, such as ``pip``:
+You can install ``reshut`` from `PyPI <https://pypi.org/project/reshut/>`_ through the usual means, such as ``pip``:
 
 .. code-block:: bash
 
@@ -18,10 +17,7 @@ means, such as ``pip``:
 Usage
 =====
 
-To use ``reshut`` two things must be done; first you must add an
-authorization middleware, and second you must apply one or more
-authorization decorators to a request‑handler method.  Consider the
-following example:
+To use ``reshut`` two things must be done; first you must add an authorization middleware, and second you must apply one or more authorization decorators to a request handler.  Consider the following example:
 
 .. code-block:: python
 
@@ -47,8 +43,7 @@ following example:
    app.add_route('/api/v3/fakes/{id:int}', api.v3.FakeApi())
 
 
-Elsewhere in your project, you defined ``FakeApi`` and decorated at
-least one handler to customise Authorization:
+Elsewhere in your project, you defined ``FakeApi`` and decorated at least one handler to customise Authorization:
 
 .. code-block:: python
 
@@ -95,24 +90,19 @@ least one handler to customise Authorization:
 In the above example:
 
 * ``@allow_anonymous`` will grant access to all callers, authenticated or not.
-* ``@allow_claim`` specifies which claims will grant access; **at least one**
-  of them must be satisfied by the request.
+* ``@allow_claim`` specifies which claims will grant access; **at least one** of them must be satisfied by the request.
 * ``@deny_claim`` specifies which claims will deny access.
-* ``@require_claim`` specifies which claims are required for “access
-  granted”; **ALL** specified claims must be satisfied by the request
-  or access is denied.
+* ``@require_claim`` specifies which claims are required for “access granted”; **ALL** specified claims must be satisfied by the request or access is denied.
 
-All authorization decorators optionally allow matching a specific literal
-value or a Claim Evaluator function.  Claim Evaluator functions are useful
-for checking complex claim types like dates, dicts, lists, etc. while
-literal values are useful for checking well‑known/individual values.
+All authorization decorators optionally allow matching a specific literal value or a Claim Evaluator function (seen in the example above as ``lambda`` syntax.)
+
+Claim Evaluator functions are useful for checking complex claim types like dates, dicts, lists, etc. while literal values are useful for checking well‑known/individual values.
 
 
 Generating Keys, Tokenizing Claims, and Validating Tokens
 =========================================================
 
-If you need to generate keys there is a CLI tool ``reshut-keygen`` you can
-use:
+If you need to generate keys there is a CLI tool ``reshut-keygen`` you can use:
 
 .. code-block:: bash
 
@@ -147,7 +137,6 @@ There is also a ``reshut-tokenize`` tool you can use to tokenize claims:
        --claims '{"foo":"bar"}' \
        --output shared_token.b64
 
-
 Lastly, there is a ``reshut-validate`` tool you can use to validate tokens:
 
 .. code-block:: bash
@@ -158,12 +147,9 @@ Lastly, there is a ``reshut-validate`` tool you can use to validate tokens:
        --token shared_token.b64
 
 
-These tools are written using the ``reshut.utils`` namespace; you can use the
-``utils`` namespace within your own code to dynamically allocate keys and
-tokens as you see fit (instead of dropping to a shell for the same result).
+These tools are written using the ``reshut.utils`` namespace; you can use the ``utils`` namespace within your own code to dynamically allocate keys and tokens as you see fit (instead of dropping to a shell for the same result).
 
-For example, here is a snippet demonstrating the generation of an
-``ed448`` keypair and also an ``ed448`` token valid for that keypair:
+For example, here is a snippet demonstrating the generation of an ``ed448`` keypair and also an ``ed448`` token valid for that keypair:
 
 .. code-block:: python
 
