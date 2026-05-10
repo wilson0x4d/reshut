@@ -2,7 +2,7 @@
 name = "reshut"
 version = "0.0.0"
 description = "..an authorization library for Falcon."
-keywords = ["falcon","auth","bearer","apikey","hmac","rsa","ed25519", "ed448"]
+keywords = ["falcon","auth","bearer","apikey","hmac","rsa","ed25519", "ed448","mateh"]
 authors = [
     { name="Shaun Wilson", email="mrshaunwilson@msn.com" }
 ]
@@ -11,8 +11,7 @@ license = "MIT"
 classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
-    "Programming Language :: Python",
-    "Topic :: Software Development :: Libraries :: Python Modules"
+    "Programming Language :: Python"
 ]
 requires-python = ">=3.11"
 dependencies = [

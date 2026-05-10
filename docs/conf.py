@@ -11,11 +11,11 @@ import sys
 PROJECT_ROOT = os.path.abspath(os.path.join('..', 'src'))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+from reshut import __version__
 
 project = 'reshut'
 author = 'Shaun Wilson'
 copyright = f'2026 {author}'
-from reshut import __version__
 release = f'{__version__}'
 
 # -- General configuration ---------------------------------------------------
