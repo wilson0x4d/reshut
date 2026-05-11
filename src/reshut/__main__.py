@@ -10,7 +10,7 @@ from .jwk import Jwk
 from .utils import Algorithm, keygen, tokenize, validate
 
 
-def __write_key_files(basename:str, key:str) -> None:
+def __write_key_files(basename: str, key: str) -> None:
     base_path = Path(basename)
     out_path = base_path.with_suffix('.jwk')
     out_path.write_text(key, encoding='utf-8')
@@ -61,7 +61,7 @@ def __cmd_validate(args: argparse.Namespace) -> None:
         raise SystemExit(7) from exc
 
 
-def main(argv:list[str]) -> None:
+def main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog='python -m reshut',
         description='Utility for generating keys, creating and validating JWTs.'

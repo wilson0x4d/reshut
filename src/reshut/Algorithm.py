@@ -32,9 +32,7 @@ class Algorithm(StrEnum):
     ED448 = 'ED448'
     """Edwards-curve (448-bit, asymmetric, faster)"""
     def __str__(self) -> str:
-        return self.value    
+        return self.value
 
 
-__all__ = [
-    'Algorithm'
-]
+__all__ = ['Algorithm']

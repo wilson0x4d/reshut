@@ -4,5 +4,5 @@
 ##
 from subprocess import run
 from sys import executable, argv, exit
-result = run([ executable, '-m', 'reshut', 'keygen' ] + argv[1:], check=False)
+result = run([executable, '-m', 'reshut', 'keygen'] + argv[1:], check=False)
 exit(result.returncode)

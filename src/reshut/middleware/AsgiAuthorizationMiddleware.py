@@ -17,12 +17,39 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
     Intercepts resource requests to apply Authorization logic.
     """
 
-    __authorization_evaluator:AuthorizationEvaluator
+    __authorization_evaluator: AuthorizationEvaluator
 
-    def __init__(self, apikey_token_evaluator:Optional[TokenEvaluator] = None, basic_token_evaluator:Optional[TokenEvaluator] = None, bearer_token_evaluator:Optional[TokenEvaluator] = None) -> None:
-        self.__authorization_evaluator = AuthorizationEvaluator(apikey_token_evaluator=apikey_token_evaluator, basic_token_evaluator=basic_token_evaluator, bearer_token_evaluator=bearer_token_evaluator)
+    def __init__(
+        self,
+        apikey_token_evaluator: Optional[TokenEvaluator] = None,
+        basic_token_evaluator: Optional[TokenEvaluator] = None,
+        bearer_token_evaluator: Optional[TokenEvaluator] = None
+    ) -> None:
+        self.__authorization_evaluator = AuthorizationEvaluator(
+            apikey_token_evaluator=apikey_token_evaluator,
+            basic_token_evaluator=basic_token_evaluator,
+            bearer_token_evaluator=bearer_token_evaluator
+        )
 
-    async def process_resource(self, req:falcon.Request, resp:falcon.Response, resource:object, params: Mapping[str, Any]) -> None:
+    @property
+    def supports_apikey(self) -> bool:
+        return self.__authorization_evaluator.supports_apikey is True
+
+    @property
+    def supports_basic(self) -> bool:
+        return self.__authorization_evaluator.supports_basic is True
+
+    @property
+    def supports_bearer(self) -> bool:
+        return self.__authorization_evaluator.supports_bearer is True
+
+    async def process_resource(
+        self,
+        req: falcon.Request,
+        resp: falcon.Response,
+        resource: object,
+        params: Mapping[str, Any]
+    ) -> None:
         """
         Intercept for ``process_resource`` that evaluates authorization data in the request against authorization requirements of the resource handler.
         """
@@ -37,6 +64,4 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
         self.__authorization_evaluator.evaluate(req, handler)
 
 
-__all__ = [
-    'AsgiAuthorizationMiddleware'
-]
+__all__ = ['AsgiAuthorizationMiddleware']

@@ -7,7 +7,7 @@ from typing import Any, Dict, Mapping, Optional, cast
 
 import falcon
 from punit import fact, exceptions
-from reshut.middleware import AuthorizationEvaluator
+from reshut.middleware.AuthorizationEvaluator import AuthorizationEvaluator
 from reshut.middleware.TokenEvaluator import TokenEvaluator
 
 

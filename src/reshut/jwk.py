@@ -40,73 +40,73 @@ class JwkCurveType(StrEnum):
 
 
 class _Jwk(TypedDict, total=False):
-    kid:str
-    use:JwkUsageType
-    alg:Algorithm
+    kid: str
+    use: JwkUsageType
+    alg: Algorithm
 
 
 class RsaJwk(_Jwk, total=False):
-    kty:Literal[JwkKeyType.RSA]
-    n:str
-    e:str
+    kty: Literal[JwkKeyType.RSA]
+    n: str
+    e: str
     # prikey fields
-    d:str
-    p:str
-    q:str
-    dp:str
-    dq:str
-    qi:str
+    d: str
+    p: str
+    q: str
+    dp: str
+    dq: str
+    qi: str
 
 
 class EcJwk(_Jwk, total=False):
-    kty:Literal[JwkKeyType.EC]
-    crv:Literal[JwkCurveType.P256, JwkCurveType.P384, JwkCurveType.P521]
-    x:str
-    y:str
+    kty: Literal[JwkKeyType.EC]
+    crv: Literal[JwkCurveType.P256, JwkCurveType.P384, JwkCurveType.P521]
+    x: str
+    y: str
     # prikey fields
-    d:str
+    d: str
 
 
 class OkpJwk(_Jwk, total=False):
-    kty:Literal[JwkKeyType.OKP]
-    crv:Literal[JwkCurveType.ED25519, JwkCurveType.ED448]
-    x:str
+    kty: Literal[JwkKeyType.OKP]
+    crv: Literal[JwkCurveType.ED25519, JwkCurveType.ED448]
+    x: str
     # prikey fields
-    d:str
+    d: str
 
 
 class OctetJwk(_Jwk, total=False):
-    kty:Literal[JwkKeyType.OCT]
-    k:str
+    kty: Literal[JwkKeyType.OCT]
+    k: str
 
 
 Jwk = Union[RsaJwk, EcJwk, OkpJwk, OctetJwk]
 
 
-def __b64_from_bytes(data:bytes) -> str:
+def __b64_from_bytes(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
 
 
-def __b64_from_int(i:int) -> str:
+def __b64_from_int(i: int) -> str:
     return __b64_from_bytes(i.to_bytes((i.bit_length() + 7) // 8, 'big'))
 
 
-def __b64_to_bytes(b64:str) -> bytes:
+def __b64_to_bytes(b64: str) -> bytes:
     padding = '=' * (-len(b64) % 4)
     return base64.urlsafe_b64decode(b64 + padding)
 
 
-def __b64_to_int(b64:str) -> int:
-    return int.from_bytes(__b64_to_bytes(b64), 'big')    
+def __b64_to_int(b64: str) -> int:
+    return int.from_bytes(__b64_to_bytes(b64), 'big')
 
 
 def from_private_key(
-        algorithm:Algorithm,
-        key:rsa.RSAPrivateKey|ec.EllipticCurvePrivateKey|ed25519.Ed25519PrivateKey|ed448.Ed448PrivateKey,
-        usage:JwkUsageType = JwkUsageType.SIG,
-        key_id:Optional[str] = None
-    ) -> Jwk:
-    result:Jwk
+    algorithm: Algorithm,
+    key: rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey | ed448.Ed448PrivateKey,
+    usage: JwkUsageType = JwkUsageType.SIG,
+    key_id: Optional[str] = None
+) -> Jwk:
+    result: Jwk
     if isinstance(key, ed448.Ed448PrivateKey):
         ed448_priv = key.private_bytes(
             encoding=serialization.Encoding.Raw,
@@ -172,13 +172,13 @@ def from_private_key(
             use=usage
         )
     else:
-        raise NotImplementedError(f'Key not supported.')
+        raise NotImplementedError('Key not supported.')
     if key_id is not None:
         result['kid']
     return result
 
 
-def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey|ec.EllipticCurvePrivateKey|ed25519.Ed25519PrivateKey|ed448.Ed448PrivateKey:
+def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey | ed448.Ed448PrivateKey:
     match JwkKeyType(jwk['kty']):
         case JwkKeyType.RSA:
             rsa_jwk = cast(RsaJwk, jwk)
@@ -222,16 +222,16 @@ def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey|ec.EllipticCurvePrivateKey|ed2
                 case _:
                     raise ValueError('Unsupported OKP Curve')
         case _:
-            raise ValueError(f'Unsupported JWK')
+            raise ValueError('Unsupported JWK')
 
 
 def from_public_key(
-        algorithm:Algorithm,
-        key:rsa.RSAPublicKey|ec.EllipticCurvePublicKey|ed25519.Ed25519PublicKey|ed448.Ed448PublicKey,
-        usage:JwkUsageType = JwkUsageType.SIG,
-        key_id:Optional[str] = None
-    ) -> Jwk:
-    result:Jwk
+    algorithm: Algorithm,
+    key: rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed25519.Ed25519PublicKey | ed448.Ed448PublicKey,
+    usage: JwkUsageType = JwkUsageType.SIG,
+    key_id: Optional[str] = None
+) -> Jwk:
+    result: Jwk
     if isinstance(key, ed448.Ed448PublicKey):
         ed448_pub = key.public_bytes(
             encoding=serialization.Encoding.Raw,
@@ -276,13 +276,13 @@ def from_public_key(
             use=usage,
         )
     else:
-        raise NotImplementedError(f'Key not supported.')
+        raise NotImplementedError('Key not supported.')
     if key_id is not None:
         result['kid']
     return result
 
 
-def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey|ec.EllipticCurvePublicKey|ed25519.Ed25519PublicKey|ed448.Ed448PublicKey:
+def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed25519.Ed25519PublicKey | ed448.Ed448PublicKey:
     match JwkKeyType(jwk['kty']):
         case JwkKeyType.RSA:
             rsa_jwk = cast(RsaJwk, jwk)
@@ -298,7 +298,7 @@ def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey|ec.EllipticCurvePublicKey|ed2551
                 JwkCurveType.P384: ec.SECP384R1(),
                 JwkCurveType.P521: ec.SECP521R1(),
             }[ec_jwk['crv']]
-            ec_pub=ec.EllipticCurvePublicNumbers(
+            ec_pub = ec.EllipticCurvePublicNumbers(
                 x=__b64_to_int(ec_jwk['x']),
                 y=__b64_to_int(ec_jwk['y']),
                 curve=curve
@@ -315,15 +315,15 @@ def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey|ec.EllipticCurvePublicKey|ed2551
                 case _:
                     raise ValueError('Unsupported OKP Curve Type')
         case _:
-            raise ValueError(f'Unsupported JWK')    
+            raise ValueError('Unsupported JWK')
 
 
 def from_symmetric_key(
-        algorithm:Algorithm,        
-        key:bytes|str,
-        usage:JwkUsageType = JwkUsageType.SIG,
-        key_id:Optional[str] = None
-    ) -> OctetJwk:
+    algorithm: Algorithm,
+    key: bytes | str,
+    usage: JwkUsageType = JwkUsageType.SIG,
+    key_id: Optional[str] = None
+) -> OctetJwk:
     if isinstance(key, str):
         key = key.encode('utf-8')
     result = OctetJwk(
@@ -353,7 +353,7 @@ __all__ = [
     'OkpJwk',
     'OctetJwk',
     'Jwk',
-    'from_private_key', 'to_private_key'
+    'from_private_key', 'to_private_key',
     'from_public_key', 'to_public_key',
     'from_symmetric_key', 'to_symmetric_key'
 ]

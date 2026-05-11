@@ -13,18 +13,18 @@ class TokenEvaluator:
     Evaluates a token given an Algorithm and Key.
     """
 
-    __key:Jwk
+    __key: Jwk
 
-    def __init__(self, key:Jwk) -> None:
+    def __init__(self, key: Jwk) -> None:
         self.__key = key
 
     def evaluate(
-            self,
-            token:str,
-            deny_claims:dict[str,str|ClaimEvaluator],
-            allow_claims:dict[str,str|ClaimEvaluator],
-            require_claims:dict[str,str|ClaimEvaluator]
-        ) -> bool:
+        self,
+        token: str,
+        deny_claims: dict[str, str | ClaimEvaluator],
+        allow_claims: dict[str, str | ClaimEvaluator],
+        require_claims: dict[str, str | ClaimEvaluator]
+    ) -> bool:
         """
         Evaluate a token against the supplied claim rules.
 
@@ -37,16 +37,16 @@ class TokenEvaluator:
         """
         claims = validate(self.__key, token)
         # check for denied claims (if any match, access denied)
-        for k,claim_check in deny_claims.items():
+        for k, claim_check in deny_claims.items():
             claim_value = claims.get(k, None)
-            if claim_value is not None and (claim_check == None or claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
+            if claim_value is not None and (claim_check is None or claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
                 # access denied
                 raise falcon.HTTPUnauthorized(
                     title='Authorization Denied',
                     description='DENY'
                 )
         # check for required claims (if any not present, access denied]
-        for k,claim_check in require_claims.items():
+        for k, claim_check in require_claims.items():
             claim_value = claims.get(k, None)
             if claim_value is None or (claim_value != claim_check and (not callable(claim_check) or not cast(ClaimEvaluator, claim_check)(claim_value))):
                 # access denied
@@ -56,7 +56,7 @@ class TokenEvaluator:
                 )
         # check for allowed claims (if none match, access denied)
         if len(allow_claims) > 0:
-            for k,claim_check in allow_claims.items():
+            for k, claim_check in allow_claims.items():
                 claim_value = claims.get(k, None)
                 if claim_value is not None and (claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
                     # access granted
@@ -70,6 +70,4 @@ class TokenEvaluator:
         return True
 
 
-__all__ = [
-    'TokenEvaluator'
-]
+__all__ = ['TokenEvaluator']

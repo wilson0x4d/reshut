@@ -11,7 +11,7 @@ from .Algorithm import Algorithm
 from .jwk import Jwk, EcJwk, OctetJwk, OkpJwk, RsaJwk, from_private_key, from_symmetric_key, to_private_key, to_public_key, to_symmetric_key
 
 
-def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> Jwk:
+def keygen(algorithm: Algorithm, key_size: Optional[int] = None) -> Jwk:
     """
     Generates a key for the specified algorithm.
 
@@ -51,7 +51,7 @@ def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> Jwk:
                 )
             )
         case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
-            curve:ec.EllipticCurve
+            curve: ec.EllipticCurve
             match algorithm:
                 case Algorithm.ES256:
                     curve = ec.SECP256R1()
@@ -72,16 +72,18 @@ def keygen(algorithm:Algorithm, key_size:Optional[int] = None) -> Jwk:
             raise NotImplementedError(f'Unsupported Algorithm "{algorithm}"')
 
 
-def tokenize(key:Jwk, claims:dict[str,Any],
-        *,
-        audience:Optional[str|list[str]] = None,
-        issuer:Optional[str] = None,
-        subject:Optional[str] = None,
-        expiry:Optional[int] = None,
-        not_before:Optional[int] = None,
-        issued_at:Optional[int] = None,
-        token_id:Optional[str] = None
-    ) -> str:
+def tokenize(
+    key: Jwk,
+    claims: dict[str, Any],
+    *,
+    audience: Optional[str | list[str]] = None,
+    issuer: Optional[str] = None,
+    subject: Optional[str] = None,
+    expiry: Optional[int] = None,
+    not_before: Optional[int] = None,
+    issued_at: Optional[int] = None,
+    token_id: Optional[str] = None
+) -> str:
     """
     Tokenize the provided claims, optionally accepting standard JWT claims as args and injecting them anew on top of existing claims.
 
@@ -98,7 +100,7 @@ def tokenize(key:Jwk, claims:dict[str,Any],
     :raises Exception: If an error occurs while creating the token.
     """    
     missing_claims = list[str]()
-    inject_claims = dict[str,Any]()
+    inject_claims = dict[str, Any]()
     #
     if audience is not None:
         inject_claims['aud'] = audience
@@ -138,21 +140,24 @@ def tokenize(key:Jwk, claims:dict[str,Any],
     algorithm = Algorithm(key['alg'])
     match algorithm:
         case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
-            return jwt.encode(claims, to_private_key(cast(EcJwk,key)), algorithm.value)
+            return jwt.encode(claims, to_private_key(cast(EcJwk, key)), algorithm.value)
         case Algorithm.ED25519 | Algorithm.ED448:
-            return jwt.encode(claims, to_private_key(cast(OkpJwk,key)), 'EdDSA')
+            return jwt.encode(claims, to_private_key(cast(OkpJwk, key)), 'EdDSA')
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            return jwt.encode(claims, to_symmetric_key(cast(OctetJwk,key)), algorithm.value)
+            return jwt.encode(claims, to_symmetric_key(cast(OctetJwk, key)), algorithm.value)
         case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
-            return jwt.encode(claims, to_private_key(cast(RsaJwk,key)), algorithm.value)
+            return jwt.encode(claims, to_private_key(cast(RsaJwk, key)), algorithm.value)
 
-def validate(key:Jwk, token:str,
-        *,
-        enforce:bool = True,
-        audience:Optional[str] = None,
-        issuer:Optional[str] = None,
-        subject:Optional[str] = None,
-    ) -> dict[str, Any]:
+
+def validate(
+    key: Jwk,
+    token: str,
+    *,
+    enforce: bool = True,
+    audience: Optional[str] = None,
+    issuer: Optional[str] = None,
+    subject: Optional[str] = None,
+) -> dict[str, Any]:
     """
     Verify a token and return the contained claims.
 
@@ -183,17 +188,17 @@ def validate(key:Jwk, token:str,
         require=[],
         enforce_minimum_key_length=False
     )
-    claims:dict[str,Any]
+    claims: dict[str, Any]
     algorithm = Algorithm(key['alg'])
     match algorithm:
         case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
-            return jwt.decode(token, to_public_key(cast(EcJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+            return jwt.decode(token, to_public_key(cast(EcJwk, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
         case Algorithm.ED25519 | Algorithm.ED448:
-            claims = jwt.decode(token, to_public_key(cast(OkpJwk,key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
+            claims = jwt.decode(token, to_public_key(cast(OkpJwk, key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            claims = jwt.decode(token, to_symmetric_key(cast(OctetJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+            claims = jwt.decode(token, to_symmetric_key(cast(OctetJwk, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
         case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
-            claims = jwt.decode(token, to_public_key(cast(RsaJwk,key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+            claims = jwt.decode(token, to_public_key(cast(RsaJwk, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
     if audience is not None:
         aud = claims.get('aud', None)
         if aud is None or (isinstance(aud, list) and audience not in aud) or aud != audience:

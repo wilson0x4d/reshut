@@ -17,12 +17,21 @@ class WsgiAuthorizationMiddleware(WsgiMiddlewareWithProcessResource):
     Intercepts resource requests to apply Authorization logic.
     """
 
-    __authorization_evaluator:AuthorizationEvaluator
+    __authorization_evaluator: AuthorizationEvaluator
 
-    def __init__(self, apikey_token_evaluator:Optional[TokenEvaluator] = None, basic_token_evaluator:Optional[TokenEvaluator] = None, bearer_token_evaluator:Optional[TokenEvaluator] = None) -> None:
-        self.__authorization_evaluator = AuthorizationEvaluator(apikey_token_evaluator=apikey_token_evaluator, basic_token_evaluator=basic_token_evaluator, bearer_token_evaluator=bearer_token_evaluator)
+    def __init__(
+        self,
+        apikey_token_evaluator: Optional[TokenEvaluator] = None,
+        basic_token_evaluator: Optional[TokenEvaluator] = None,
+        bearer_token_evaluator: Optional[TokenEvaluator] = None
+    ) -> None:
+        self.__authorization_evaluator = AuthorizationEvaluator(
+            apikey_token_evaluator=apikey_token_evaluator,
+            basic_token_evaluator=basic_token_evaluator,
+            bearer_token_evaluator=bearer_token_evaluator
+        )
 
-    def process_resource(self, req:falcon.Request, resp:falcon.Response, resource:object, params: Mapping[str, Any]) -> None:
+    def process_resource(self, req: falcon.Request, resp: falcon.Response, resource: object, params: Mapping[str, Any]) -> None:
         """
         Intercept for ``process_resource`` that evaluates authorization data in the request against authorization requirements of the resource handler.
         """
@@ -37,6 +46,4 @@ class WsgiAuthorizationMiddleware(WsgiMiddlewareWithProcessResource):
         self.__authorization_evaluator.evaluate(req, handler)
 
 
-__all__ = [
-    'WsgiAuthorizationMiddleware'
-]
+__all__ = ['WsgiAuthorizationMiddleware']
