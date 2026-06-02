@@ -167,7 +167,7 @@ def validate(
 
     :param public_key:  The public key (or secret) used for verification.
     :param token:       The compact-serialization JWT string to be validated.
-    :param enforce:     Indicates that "standard claims enforcement" should be performed, for example that ``exp`` is not validated before the indicated time or that ``exp`` is not in the past.
+    :param enforce:     Indicates that "standard claims enforcement" should be performed, for example that ``nbf`` is not validated before the indicated time or that ``exp`` is not in the past.
     :param audience:    Expected ``aud`` claim. Omit to skip validating ``aud`` claim.
     :param issuer:      Expected ``iss`` claim. Omit to skip validating ``iss`` claim.
     :param subject:     Expected ``sub`` claim. Omit to skip validating ``sub`` claim.

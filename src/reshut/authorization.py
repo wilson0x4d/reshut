@@ -44,7 +44,7 @@ def allow_claim(
             claim_name: claim_check
         }))
     else:
-        allow_list = cast(dict[str, Any],getattr(org, bag_name))
+        allow_list = cast(dict[str, Any], getattr(org, bag_name))
         allow_list[claim_name] = claim_check
     return func
 

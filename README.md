@@ -13,7 +13,7 @@ This README is only a high-level introduction to **reshut**. For more detailed d
 - **Header handling** for `Authorization` and `X-API-Key` headers; exposing Bearer, API‑key, and Basic auth schemes.
 - **Supported algorithms**: HMAC (SHA‑256/384/512), RSA (2048, 3072, ≥ 4096 bits), ECDSA (P‑256, P‑384, P‑512), and EdDSA (Ed25519, Ed448).
 - **JWK implementation** for secure key transmission.
-- **Utility functions** for key generation, claim tokenisation, and token validation, plus equivalent CLI tools for dev/QA/ops use.
+- **Utility functions** for key generation, claim tokenization, and token validation, plus equivalent CLI tools for dev/QA/ops use.
 
 
 ## Installation
@@ -21,7 +21,7 @@ This README is only a high-level introduction to **reshut**. For more detailed d
 You can install `reshut` from [PyPI](https://pypi.org/project/reshut/) through usual means, such as `pip`:
 
 ```bash
-   pip install reshut
+    pip install reshut
 ```
 
 
@@ -162,7 +162,7 @@ In a Python script you can import utility functions from the ``reshut.utils`` na
     # tokenize claims:
     token = utils.tokenize(
         ed448_key,
-        {
+        {S
             'sub': 'Subject',
             'iss': 'Issuer'
         }

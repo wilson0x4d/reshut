@@ -5,6 +5,7 @@ import falcon
 from falcon._typing import WsgiMiddlewareWithProcessResource
 import inspect
 from typing import Any, Mapping, Optional, cast
+
 from .AuthorizationEvaluator import AuthorizationEvaluator
 from .TokenEvaluator import TokenEvaluator
 
@@ -23,15 +24,39 @@ class WsgiAuthorizationMiddleware(WsgiMiddlewareWithProcessResource):
         self,
         apikey_token_evaluator: Optional[TokenEvaluator] = None,
         basic_token_evaluator: Optional[TokenEvaluator] = None,
-        bearer_token_evaluator: Optional[TokenEvaluator] = None
+        bearer_token_evaluator: Optional[TokenEvaluator] = None,
+        revokation_evaluator: Optional[TokenEvaluator] = None
     ) -> None:
         self.__authorization_evaluator = AuthorizationEvaluator(
             apikey_token_evaluator=apikey_token_evaluator,
             basic_token_evaluator=basic_token_evaluator,
-            bearer_token_evaluator=bearer_token_evaluator
+            bearer_token_evaluator=bearer_token_evaluator,
+            revokation_evaluator=revokation_evaluator
         )
 
-    def process_resource(self, req: falcon.Request, resp: falcon.Response, resource: object, params: Mapping[str, Any]) -> None:
+    @property
+    def supports_apikey(self) -> bool:
+        return self.__authorization_evaluator.supports_apikey is True
+
+    @property
+    def supports_basic(self) -> bool:
+        return self.__authorization_evaluator.supports_basic is True
+
+    @property
+    def supports_bearer(self) -> bool:
+        return self.__authorization_evaluator.supports_bearer is True
+
+    @property
+    def supports_revokation(self) -> bool:
+        return self.__authorization_evaluator.supports_revokation is True
+
+    def process_resource(
+        self,
+        req: falcon.Request,
+        resp: falcon.Response,
+        resource: object,
+        params: Mapping[str, Any]
+    ) -> None:
         """
         Intercept for ``process_resource`` that evaluates authorization data in the request against authorization requirements of the resource handler.
         """

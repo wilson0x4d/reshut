@@ -3,8 +3,11 @@
 
 import falcon
 from typing import Any, Optional, cast
+
 from ..authorization import ClaimEvaluator
 from .TokenEvaluator import TokenEvaluator
+
+__EMPTY_CLAIMS_RULES__ = dict[str, str | ClaimEvaluator]()
 
 
 class AuthorizationEvaluator:
@@ -15,16 +18,20 @@ class AuthorizationEvaluator:
     __apikey_token_evaluator: Optional[TokenEvaluator]
     __basic_token_evaluator: Optional[TokenEvaluator]
     __bearer_token_evaluator: Optional[TokenEvaluator]
+    __revokation_evaluator: Optional[TokenEvaluator]
 
     def __init__(
         self,
+        /,
         apikey_token_evaluator: Optional[TokenEvaluator] = None,
         basic_token_evaluator: Optional[TokenEvaluator] = None,
-        bearer_token_evaluator: Optional[TokenEvaluator] = None
+        bearer_token_evaluator: Optional[TokenEvaluator] = None,
+        revokation_evaluator: Optional[TokenEvaluator] = None
     ) -> None:
         self.__apikey_token_evaluator = apikey_token_evaluator
         self.__basic_token_evaluator = basic_token_evaluator
         self.__bearer_token_evaluator = bearer_token_evaluator
+        self.__revokation_evaluator = revokation_evaluator
 
     @property
     def supports_apikey(self) -> bool:
@@ -38,6 +45,10 @@ class AuthorizationEvaluator:
     def supports_bearer(self) -> bool:
         return self.__bearer_token_evaluator is not None
 
+    @property
+    def supports_revokation(self) -> bool:
+        return self.__revokation_evaluator is not None
+
     def evaluate(self, req: falcon.Request, handler: Any) -> None:
         """
         Evaluate authorization data in ``req`` against authorization requirements of ``handler``.
@@ -47,9 +58,6 @@ class AuthorizationEvaluator:
         """
         scheme: str | None = None
         token: str | None = None
-        deny_claims = {} if not hasattr(handler, '__reshut_deny') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_deny'))
-        allow_claims = {} if not hasattr(handler, '__reshut_allow') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_allow'))
-        require_claims = {} if not hasattr(handler, '__reshut_require') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_require'))
         # check for Authorization header
         authorization = req.get_header('Authorization', False, None)
         if authorization is not None:
@@ -65,6 +73,16 @@ class AuthorizationEvaluator:
                 title='Authorization Required',
                 description='Missing Authorization',
             )
+        # check for token revokation
+        if self.__revokation_evaluator is not None and self.__revokation_evaluator.evaluate(token, __EMPTY_CLAIMS_RULES__, __EMPTY_CLAIMS_RULES__, __EMPTY_CLAIMS_RULES__):
+            raise falcon.HTTPUnauthorized(
+                title='Authorization Invalid',
+                description='TOKEN'
+            )
+        # resolve claims rules
+        deny_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_deny') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_deny'))
+        allow_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_allow') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_allow'))
+        require_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_require') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_require'))
         match scheme:
             case 'apikey':
                 if self.__apikey_token_evaluator is not None and self.__apikey_token_evaluator.evaluate(token, deny_claims, allow_claims, require_claims):
@@ -78,16 +96,14 @@ class AuthorizationEvaluator:
             case _:
                 raise falcon.HTTPBadRequest(
                     title='Authorization Unsupported',
-                    description=f'Scheme "{scheme}" not supported.',
+                    description=scheme
                 )
         # reject.
         if self.__apikey_token_evaluator is not None or self.__basic_token_evaluator is not None or self.__bearer_token_evaluator is not None:
             raise falcon.HTTPUnauthorized(
                 title='Authorization Failed',
-                description='Unsuccessful',
+                description='Unsuccessful'
             )
 
 
-__all__ = [
-    'AuthorizationEvaluator'
-]
+__all__ = ['AuthorizationEvaluator']

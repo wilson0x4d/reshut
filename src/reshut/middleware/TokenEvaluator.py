@@ -3,6 +3,7 @@
 
 import falcon
 from typing import cast
+
 from ..authorization import ClaimEvaluator
 from ..jwk import Jwk
 from ..utils import validate

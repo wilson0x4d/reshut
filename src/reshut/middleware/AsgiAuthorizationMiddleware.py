@@ -5,6 +5,7 @@ import falcon
 from falcon._typing import AsgiMiddlewareWithProcessResource
 import inspect
 from typing import Any, Mapping, Optional, cast
+
 from .AuthorizationEvaluator import AuthorizationEvaluator
 from .TokenEvaluator import TokenEvaluator
 
@@ -21,14 +22,17 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
 
     def __init__(
         self,
+        /,
         apikey_token_evaluator: Optional[TokenEvaluator] = None,
         basic_token_evaluator: Optional[TokenEvaluator] = None,
-        bearer_token_evaluator: Optional[TokenEvaluator] = None
+        bearer_token_evaluator: Optional[TokenEvaluator] = None,
+        revokation_evaluator: Optional[TokenEvaluator] = None
     ) -> None:
         self.__authorization_evaluator = AuthorizationEvaluator(
             apikey_token_evaluator=apikey_token_evaluator,
             basic_token_evaluator=basic_token_evaluator,
-            bearer_token_evaluator=bearer_token_evaluator
+            bearer_token_evaluator=bearer_token_evaluator,
+            revokation_evaluator=revokation_evaluator
         )
 
     @property
@@ -42,6 +46,10 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
     @property
     def supports_bearer(self) -> bool:
         return self.__authorization_evaluator.supports_bearer is True
+
+    @property
+    def supports_revokation(self) -> bool:
+        return self.__authorization_evaluator.supports_revokation is True
 
     async def process_resource(
         self,
