@@ -22,6 +22,7 @@ class WsgiAuthorizationMiddleware(WsgiMiddlewareWithProcessResource):
 
     def __init__(
         self,
+        /,
         apikey_token_evaluator: Optional[TokenEvaluator] = None,
         basic_token_evaluator: Optional[TokenEvaluator] = None,
         bearer_token_evaluator: Optional[TokenEvaluator] = None,
