@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import jwt
 from jwt.types import Options
 import secrets
+import time
 from typing import Any, Optional, cast
 from .Algorithm import Algorithm
 from .jwk import Jwk, EcJwk, OctetJwk, OkpJwk, RsaJwk, from_private_key, from_symmetric_key, to_private_key, to_public_key, to_symmetric_key
@@ -125,7 +126,7 @@ def tokenize(
     if issued_at is not None:
         inject_claims['iat'] = issued_at
     elif 'iat' not in claims:
-        inject_claims['iat'] = int(datetime.now(timezone.utc).timestamp())
+        inject_claims['iat'] = int(time.time())
     #
     # optional/situational
     #
@@ -135,7 +136,7 @@ def tokenize(
         inject_claims['jti'] = token_id
     #
     if len(inject_claims) > 0:
-        claims |= inject_claims
+        claims = claims | inject_claims
     #
     algorithm = Algorithm(key['alg'])
     match algorithm:
@@ -174,7 +175,7 @@ def validate(
     :return:            The decoded claims (as a ``dict``).
     :raises Exception:  If the token is invalid, fails standards-enforcement, or claims do not match expected values.
     """
-    tsnow = int(datetime.now().timestamp())
+    tsnow = int(time.time())
     options = Options(
         verify_signature=enforce,
         strict_aud=False,
