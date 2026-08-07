@@ -7,9 +7,6 @@ from typing import Any, Optional, cast
 from ..authorization import ClaimEvaluator
 from .TokenEvaluator import TokenEvaluator
 
-__EMPTY_CLAIMS_RULES__ = dict[str, str | ClaimEvaluator]()
-
-
 class AuthorizationEvaluator:
     """
     Evaluates the authorization data in a request against the authorization requirements of a resource handler.
@@ -56,6 +53,7 @@ class AuthorizationEvaluator:
         :raises falcon.HTTPBadRequest: When the request has missing or invalid Authorization data.
         :raises falcon.HTTPUnauthorized: When claim rule checks fail.
         """
+        empty_claims_rules: dict[str, str | ClaimEvaluator] = dict()
         scheme: str | None = None
         token: str | None = None
         # check for Authorization header
@@ -74,15 +72,15 @@ class AuthorizationEvaluator:
                 description='Missing Authorization',
             )
         # check for token revokation
-        if self.__revokation_evaluator is not None and self.__revokation_evaluator.evaluate(token, __EMPTY_CLAIMS_RULES__, __EMPTY_CLAIMS_RULES__, __EMPTY_CLAIMS_RULES__):
+        if self.__revokation_evaluator is not None and self.__revokation_evaluator.evaluate(token, empty_claims_rules, empty_claims_rules, empty_claims_rules):
             raise falcon.HTTPUnauthorized(
                 title='Authorization Invalid',
                 description='TOKEN'
             )
         # resolve claims rules
-        deny_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_deny') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_deny'))
-        allow_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_allow') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_allow'))
-        require_claims = __EMPTY_CLAIMS_RULES__ if not hasattr(handler, '__reshut_require') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_require'))
+        deny_claims = empty_claims_rules if not hasattr(handler, '__reshut_deny') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_deny'))
+        allow_claims = empty_claims_rules if not hasattr(handler, '__reshut_allow') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_allow'))
+        require_claims = empty_claims_rules if not hasattr(handler, '__reshut_require') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_require'))
         match scheme:
             case 'apikey':
                 if self.__apikey_token_evaluator is not None and self.__apikey_token_evaluator.evaluate(token, deny_claims, allow_claims, require_claims):
