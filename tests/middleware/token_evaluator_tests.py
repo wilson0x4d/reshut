@@ -14,7 +14,7 @@ def __make_evaluator() -> tuple[TokenEvaluator, Jwk]:
 
 
 @fact
-def allow_claim_matching():
+def allow_claim_matching() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob'}
 
@@ -30,7 +30,7 @@ def allow_claim_matching():
 
 
 @fact
-def allow_claim_missing():
+def allow_claim_missing() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'user', 'user': 'bob'}
 
@@ -51,7 +51,7 @@ def allow_claim_missing():
 
 
 @fact
-def deny_claim_exact_match():
+def deny_claim_exact_match() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'blocked': True}
 
@@ -70,7 +70,7 @@ def deny_claim_exact_match():
 
 
 @fact
-def deny_claim_custom_evaluator():
+def deny_claim_custom_evaluator() -> None:
     from typing import Callable
     from reshut.authorization import ClaimEvaluator
 
@@ -97,7 +97,7 @@ def deny_claim_custom_evaluator():
 
 
 @fact
-def require_claim_missing():
+def require_claim_missing() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin'}
 
@@ -116,7 +116,7 @@ def require_claim_missing():
 
 
 @fact
-def require_claim_wrong_value():
+def require_claim_wrong_value() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'user': 'alice'}
 
@@ -135,7 +135,7 @@ def require_claim_wrong_value():
 
 
 @fact
-def require_claim_success():
+def require_claim_success() -> None:
     from reshut.authorization import ClaimEvaluator
 
     class StartsWithA(ClaimEvaluator):
@@ -156,7 +156,7 @@ def require_claim_success():
 
 
 @fact
-def full_flow_success():
+def full_flow_success() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob', 'dept': 'sales'}
 
@@ -171,7 +171,7 @@ def full_flow_success():
 
 
 @fact
-def full_flow_deny_overrides():
+def full_flow_deny_overrides() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob'}
 
@@ -190,7 +190,7 @@ def full_flow_deny_overrides():
 
 
 @fact
-def full_flow_require_missing_overrides():
+def full_flow_require_missing_overrides() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin'}   # missing required 'user'
 
