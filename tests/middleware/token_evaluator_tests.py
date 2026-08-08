@@ -3,9 +3,11 @@
 
 import falcon
 from punit import fact
+from reshut.authorization import ClaimEvaluator
 from reshut.jwk import Jwk
 from reshut.middleware import TokenEvaluator
 from reshut.utils import Algorithm, keygen, tokenize
+from typing import cast
 
 def __make_evaluator() -> tuple[TokenEvaluator, Jwk]:
     key = keygen(Algorithm.HS256)
@@ -21,9 +23,9 @@ def allow_claim_matching() -> None:
     token = tokenize(secret, claims)
 
     # allow_claims requires role == 'admin'
-    allow = {'role': 'admin'}
-    deny   = {}
-    require = {}
+    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    deny: dict[str, str | ClaimEvaluator] = {}
+    require: dict[str, str | ClaimEvaluator] = {}
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Allowed claim should grant access'
@@ -36,9 +38,9 @@ def allow_claim_missing() -> None:
 
     token = tokenize(secret, claims)
 
-    allow = {'role': 'admin'}   # we *require* admin, but token is just 'user'
-    deny   = {}
-    require = {}
+    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    deny: dict[str, str | ClaimEvaluator] = {}
+    require: dict[str, str | ClaimEvaluator] = {}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -57,9 +59,9 @@ def deny_claim_exact_match() -> None:
 
     token = tokenize(secret, claims)
 
-    deny = {'blocked': True}    # any token with blocked=True must be denied
-    allow = {}
-    require = {}
+    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'blocked': True})
+    allow: dict[str, str | ClaimEvaluator] = {}
+    require: dict[str, str | ClaimEvaluator] = {}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -72,10 +74,9 @@ def deny_claim_exact_match() -> None:
 @fact
 def deny_claim_custom_evaluator() -> None:
     from typing import Callable
-    from reshut.authorization import ClaimEvaluator
 
     # A simple evaluator that denies any numeric claim > 10
-    class GreaterThanTen(ClaimEvaluator):
+    class GreaterThanTen:
         def __call__(self, value) -> bool:      # return True = match → deny
             return isinstance(value, (int, float)) and value > 10
 
@@ -84,9 +85,9 @@ def deny_claim_custom_evaluator() -> None:
 
     token = tokenize(secret, claims)
 
-    deny = {'score': GreaterThanTen()}
-    allow = {}
-    require = {}
+    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'score': GreaterThanTen()})
+    allow: dict[str, str | ClaimEvaluator] = {}
+    require: dict[str, str | ClaimEvaluator] = {}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -103,9 +104,9 @@ def require_claim_missing() -> None:
 
     token = tokenize(secret, claims)
 
-    require = {'user': 'bob'}   # token does not contain 'user'
-    deny = {}
-    allow = {}
+    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
+    deny: dict[str, str | ClaimEvaluator] = {}
+    allow: dict[str, str | ClaimEvaluator] = {}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -122,9 +123,9 @@ def require_claim_wrong_value() -> None:
 
     token = tokenize(secret, claims)
 
-    require = {'user': 'bob'}   # wrong value
-    deny = {}
-    allow = {}
+    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
+    deny: dict[str, str | ClaimEvaluator] = {}
+    allow: dict[str, str | ClaimEvaluator] = {}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -138,7 +139,7 @@ def require_claim_wrong_value() -> None:
 def require_claim_success() -> None:
     from reshut.authorization import ClaimEvaluator
 
-    class StartsWithA(ClaimEvaluator):
+    class StartsWithA:
         def __call__(self, value) -> bool:
             return isinstance(value, str) and value.startswith('A')
 
@@ -147,9 +148,9 @@ def require_claim_success() -> None:
 
     token = tokenize(secret, claims)
 
-    require = {'user': StartsWithA()}
-    deny = {}
-    allow = {}
+    require: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'user': StartsWithA()})
+    deny: dict[str, str | ClaimEvaluator] = {}
+    allow: dict[str, str | ClaimEvaluator] = {}
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Required claim should allow access'
@@ -162,9 +163,9 @@ def full_flow_success() -> None:
 
     token = tokenize(secret, claims)
 
-    deny = {'blocked': False}                # not present → no deny
-    require = {'role': 'admin'}              # matches
-    allow = {'dept': 'sales', 'user': 'bob'} # at least one matches (both do)
+    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'blocked': False})
+    require: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    allow: dict[str, str | ClaimEvaluator] = {'dept': 'sales', 'user': 'bob'}
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'All rules satisfied – should be granted'
@@ -177,9 +178,9 @@ def full_flow_deny_overrides() -> None:
 
     token = tokenize(secret, claims)
 
-    deny = {'user': 'bob'}      # this matches → immediate denial
-    require = {'role': 'admin'}
-    allow = {'role': 'admin'}
+    deny: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
+    require: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -196,9 +197,9 @@ def full_flow_require_missing_overrides() -> None:
 
     token = tokenize(secret, claims)
 
-    deny = {}
-    require = {'user': 'bob'}    # missing → denial
-    allow = {'role': 'admin'}    # would match, but require fails first
+    deny: dict[str, str | ClaimEvaluator] = {}
+    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
+    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
 
     try:
         evaluator.evaluate(token, deny, allow, require)
