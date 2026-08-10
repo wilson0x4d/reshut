@@ -21,11 +21,10 @@ def allow_anonymous(func: Callable[..., Any]) -> Callable[..., Any]:
 
 
 def allow_claim(
-    func: Callable[..., Any],
     claim_name: str,
     claim_check: Optional[Any | ClaimEvaluator] = None,
-    is_required: bool = False
-) -> Callable[..., Any]:
+    *, is_required: bool = False
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Adds an ALLOW claim rule to a handler.
 
@@ -43,26 +42,26 @@ def allow_claim(
         def on_get(self, req, resp):
             # "read" OR "write" will pass
 
-    :param func: The handler function.
     :param claim_name: Claim name.
     :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value requires an exact match. A ``ClaimEvaluator`` callable is invoked with the claim value.
     :param is_required: Optional boolean indicating that the claim is required, forming a "REQUIRED claim rule".
-    :return: The handler function (not wrapped.)
+    :return: A decorator that adds the claim rule to the handler function.
     """
-    bag_name = '__reshut_require' if is_required else '__reshut_allow'
-    org = inspect.unwrap(func)
-    if not hasattr(org, bag_name):
-        setattr(org, bag_name, list[tuple[str, Any]]())
-    claim_rules = cast(list[tuple[str, Any]], getattr(org, bag_name))
-    claim_rules.append((claim_name, claim_check))
-    return func
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        bag_name = '__reshut_require' if is_required else '__reshut_allow'
+        org = inspect.unwrap(func)
+        if not hasattr(org, bag_name):
+            setattr(org, bag_name, list[tuple[str, Any]]())
+        claim_rules = cast(list[tuple[str, Any]], getattr(org, bag_name))
+        claim_rules.append((claim_name, claim_check))
+        return func
+    return decorator
 
 
 def deny_claim(
-    func: Callable[..., Any],
     claim_name: str,
     claim_check: Optional[Any | ClaimEvaluator] = None
-) -> Callable[..., Any]:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Adds a DENY claim rule to a handler.
 
@@ -80,24 +79,24 @@ def deny_claim(
         def on_patch(self, req, resp):
             # blocks if scope is "admin-only" OR "readonly"
 
-    :param func: The handler function.
     :param claim_name: Claim name.
     :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value blocks if matched exactly. A ``ClaimEvaluator`` callable is invoked with the claim value.
-    :return: The handler function (not wrapped.)
+    :return: A decorator that adds the deny claim rule to the handler function.
     """
-    org = inspect.unwrap(func)
-    if not hasattr(org, '__reshut_deny'):
-        setattr(org, '__reshut_deny', list[tuple[str, Any]]())
-    claim_rules = cast(list[tuple[str, Any]], getattr(org, '__reshut_deny'))
-    claim_rules.append((claim_name, claim_check))
-    return func
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        org = inspect.unwrap(func)
+        if not hasattr(org, '__reshut_deny'):
+            setattr(org, '__reshut_deny', list[tuple[str, Any]]())
+        claim_rules = cast(list[tuple[str, Any]], getattr(org, '__reshut_deny'))
+        claim_rules.append((claim_name, claim_check))
+        return func
+    return decorator
 
 
 def require_claim(
-    func: Callable[..., Any],
     claim_name: str,
     claim_check: Optional[Any | ClaimEvaluator] = None
-) -> Callable[..., Any]:
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Adds a REQUIRED claim rule to a handler.
 
@@ -115,12 +114,11 @@ def require_claim(
         def on_delete(self, req, resp):
             # both role=admin AND scope=write required
 
-    :param func: The handler function.
     :param claim_name: Claim name.
     :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value requires an exact match. A ``ClaimEvaluator`` callable is invoked with the claim value.
-    :return: The handler function (not wrapped.)
+    :return: A decorator that adds the required claim rule to the handler function.
     """
-    return allow_claim(func, claim_name, claim_check, True)
+    return allow_claim(claim_name, claim_check, is_required=True)  # type: ignore[return-value]
 
 
 __all__ = [
