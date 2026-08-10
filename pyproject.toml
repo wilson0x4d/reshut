@@ -30,12 +30,10 @@ dev = [
     "twine"
 ]
 
-[tool.setuptools.data-files]
-bin = [
-    ".scripts/reshut-keygen",
-    ".scripts/reshut-tokenize",
-    ".scripts/reshut-validate"
-]
+[project.scripts]
+reshut-keygen = "reshut.__main__:reshut_keygen_cli"
+reshut-tokenize = "reshut.__main__:reshut_tokenize_cli"
+reshut-validate = "reshut.__main__:reshut_validate_cli"
 
 [tool.setuptools.package-data]
 "reshut" = ["py.typed"]

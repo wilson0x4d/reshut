@@ -61,6 +61,21 @@ def __cmd_validate(args: argparse.Namespace) -> None:
         raise SystemExit(7) from exc
 
 
+def reshut_keygen_cli(argv: list[str] | None = None) -> None:
+    args = argv if argv is not None else sys.argv[1:]
+    main(['keygen'] + args)
+
+
+def reshut_tokenize_cli(argv: list[str] | None = None) -> None:
+    args = argv if argv is not None else sys.argv[1:]
+    main(['tokenize'] + args)
+
+
+def reshut_validate_cli(argv: list[str] | None = None) -> None:
+    args = argv if argv is not None else sys.argv[1:]
+    main(['validate'] + args)
+
+
 def main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(
         prog='python -m reshut',
