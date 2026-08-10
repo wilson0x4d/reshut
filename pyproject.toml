@@ -2,7 +2,7 @@
 name = "reshut"
 version = "0.0.0"
 description = "..an authorization library for Falcon."
-keywords = ["falcon","auth","bearer","apikey","hmac","rsa","ed25519", "ed448","mateh"]
+keywords = ["falcon","auth","bearer","apikey","hmac","rsa","ed25519", "ed448"]
 authors = [
     { name="Shaun Wilson", email="mrshaunwilson@msn.com" }
 ]
@@ -25,7 +25,7 @@ dev = [
     "build",
     "coverage",
     "mypy",
-    "punit (>=1.12.5)",
+    "punit (>=1.13.3)",
     "twine"
 ]
 
