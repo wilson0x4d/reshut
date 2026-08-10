@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import falcon
-from typing import cast
+from typing import Any, cast
 
 from ..authorization import ClaimEvaluator
 from ..jwk import Jwk
@@ -22,9 +22,9 @@ class TokenEvaluator:
     def evaluate(
         self,
         token: str,
-        deny_claims: dict[str, str | ClaimEvaluator],
-        allow_claims: dict[str, str | ClaimEvaluator],
-        require_claims: dict[str, str | ClaimEvaluator]
+        deny_claims: list[tuple[str, Any]],
+        allow_claims: list[tuple[str, Any]],
+        require_claims: list[tuple[str, Any]]
     ) -> bool:
         """
         Evaluate a token against the supplied claim rules.
@@ -38,7 +38,7 @@ class TokenEvaluator:
         """
         claims = validate(self.__key, token)
         # check for denied claims (if any match, access denied)
-        for k, claim_check in deny_claims.items():
+        for k, claim_check in deny_claims:
             claim_value = claims.get(k, None)
             if claim_value is not None and (claim_check is None or claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
                 # access denied
@@ -47,7 +47,7 @@ class TokenEvaluator:
                     description='DENY'
                 )
         # check for required claims (if any not present, access denied]
-        for k, claim_check in require_claims.items():
+        for k, claim_check in require_claims:
             claim_value = claims.get(k, None)
             if claim_value is None or (claim_value != claim_check and (not callable(claim_check) or not cast(ClaimEvaluator, claim_check)(claim_value))):
                 # access denied
@@ -56,8 +56,8 @@ class TokenEvaluator:
                     description='REQUIRE'
                 )
         # check for allowed claims (if none match, access denied)
-        if len(allow_claims) > 0:
-            for k, claim_check in allow_claims.items():
+        if allow_claims:
+            for k, claim_check in allow_claims:
                 claim_value = claims.get(k, None)
                 if claim_value is not None and (claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
                     # access granted

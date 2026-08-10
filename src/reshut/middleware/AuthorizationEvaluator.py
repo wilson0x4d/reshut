@@ -53,7 +53,7 @@ class AuthorizationEvaluator:
         :raises falcon.HTTPBadRequest: When the request has missing or invalid Authorization data.
         :raises falcon.HTTPUnauthorized: When claim rule checks fail.
         """
-        empty_claims_rules: dict[str, str | ClaimEvaluator] = dict()
+        empty_claims_rules: list[tuple[str, Any]] = []
         scheme: str | None = None
         token: str | None = None
         # check for Authorization header
@@ -78,9 +78,9 @@ class AuthorizationEvaluator:
                 description='TOKEN'
             )
         # resolve claims rules
-        deny_claims = empty_claims_rules if not hasattr(handler, '__reshut_deny') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_deny'))
-        allow_claims = empty_claims_rules if not hasattr(handler, '__reshut_allow') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_allow'))
-        require_claims = empty_claims_rules if not hasattr(handler, '__reshut_require') else cast(dict[str, str | ClaimEvaluator], getattr(handler, '__reshut_require'))
+        deny_claims = empty_claims_rules if not hasattr(handler, '__reshut_deny') else cast(list[tuple[str, Any]], getattr(handler, '__reshut_deny'))
+        allow_claims = empty_claims_rules if not hasattr(handler, '__reshut_allow') else cast(list[tuple[str, Any]], getattr(handler, '__reshut_allow'))
+        require_claims = empty_claims_rules if not hasattr(handler, '__reshut_require') else cast(list[tuple[str, Any]], getattr(handler, '__reshut_require'))
         match scheme:
             case 'apikey':
                 if self.__apikey_token_evaluator is not None and self.__apikey_token_evaluator.evaluate(token, deny_claims, allow_claims, require_claims):

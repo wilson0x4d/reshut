@@ -22,14 +22,14 @@ class _DummyRequest:
 
 
 class _DummyHandler:
-    __reshut_allow: Optional[Dict[str, Any]] = None
-    __reshut_deny: Optional[Dict[str, Any]] = None
-    __reshut_require: Optional[Dict[str, Any]] = None
+    __reshut_allow: Optional[list[tuple[str, Any]]] = None
+    __reshut_deny: Optional[list[tuple[str, Any]]] = None
+    __reshut_require: Optional[list[tuple[str, Any]]] = None
 
 
 class _StubTokenEvaluator(TokenEvaluator):
     __result: bool
-    __calls: list[tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any]]]
+    __calls: list[tuple[str, list[tuple[str, Any]], list[tuple[str, Any]], list[tuple[str, Any]]]]
 
     def __init__(self, result: bool) -> None:
         self.__result = result
@@ -38,15 +38,15 @@ class _StubTokenEvaluator(TokenEvaluator):
     def evaluate(
         self,
         token: str,
-        deny: Dict[str, Any],
-        allow: Dict[str, Any],
-        require: Dict[str, Any],
+        deny: list[tuple[str, Any]],
+        allow: list[tuple[str, Any]],
+        require: list[tuple[str, Any]],
     ) -> bool:
         self.__calls.append((token, deny, allow, require))
         return self.__result
 
     @property
-    def calls(self) -> list[tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any]]]:
+    def calls(self) -> list[tuple[str, list[tuple[str, Any]], list[tuple[str, Any]], list[tuple[str, Any]]]]:
         return self.__calls
 
 
@@ -67,9 +67,9 @@ def evaluate_apikey_successful() -> None:
     assert len(token_evaluator.calls) == 1
     token, deny, allow, require = token_evaluator.calls[0]
     assert token == 'valid-apikey'
-    assert deny == {}
-    assert allow == {}
-    assert require == {}
+    assert deny == []
+    assert allow == []
+    assert require == []
 
 
 @fact
@@ -168,9 +168,9 @@ def evaluate_handler_claims_are_forwarded_to_evaluator() -> None:
     )
     request = cast(falcon.Request, _DummyRequest(headers={'X-API-Key': 'any-key'}))
     handler = _DummyHandler()
-    handler.__reshut_allow = {'role': 'admin'}
-    handler.__reshut_deny = {'blocked': True}
-    handler.__reshut_require = {'active': True}
+    handler.__reshut_allow = [('role', 'admin')]
+    handler.__reshut_deny = [('blocked', True)]
+    handler.__reshut_require = [('active', True)]
 
     auth_evaluator.evaluate(request, handler)
 

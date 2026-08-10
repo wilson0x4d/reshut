@@ -28,8 +28,20 @@ def allow_claim(
 ) -> Callable[..., Any]:
     """
     Adds an ALLOW claim rule to a handler.
-    
+
     When at least one ALLOW claim rule is defined on a handler, then access is denied if at least one of the allowed claims is not presented.
+
+    Multiple decorators with the same ``claim_name`` are cumulative — each ``@allow_claim`` appends a separate rule.
+    At evaluation, any matching claim grants access (OR semantics).
+
+    Example — stack same claim name with different checks:
+
+    .. code-block:: python
+
+        @allow_claim("scope", "read")
+        @allow_claim("scope", "write")
+        def on_get(self, req, resp):
+            # "read" OR "write" will pass
 
     :param func: The handler function.
     :param claim_name: Claim name.
@@ -40,12 +52,9 @@ def allow_claim(
     bag_name = '__reshut_require' if is_required else '__reshut_allow'
     org = inspect.unwrap(func)
     if not hasattr(org, bag_name):
-        setattr(org, bag_name, dict[str, Any]({
-            claim_name: claim_check
-        }))
-    else:
-        allow_list = cast(dict[str, Any], getattr(org, bag_name))
-        allow_list[claim_name] = claim_check
+        setattr(org, bag_name, list[tuple[str, Any]]())
+    claim_rules = cast(list[tuple[str, Any]], getattr(org, bag_name))
+    claim_rules.append((claim_name, claim_check))
     return func
 
 
@@ -59,6 +68,18 @@ def deny_claim(
 
     When any presented claim matches a DENY claim rule, then access is denied.
 
+    Multiple decorators with the same ``claim_name`` are cumulative — each ``@deny_claim`` appends a separate rule.
+    At evaluation, any matching claim blocks access (OR within the deny set).
+
+    Example — stack same claim name with different checks:
+
+    .. code-block:: python
+
+        @deny_claim("scope", "admin-only")
+        @deny_claim("scope", "readonly")
+        def on_patch(self, req, resp):
+            # blocks if scope is "admin-only" OR "readonly"
+
     :param func: The handler function.
     :param claim_name: Claim name.
     :param claim_check: Optional literal value that the claim must NOT present, or a ``ClaimEvaluator`` that checks the claim is a match.
@@ -66,12 +87,9 @@ def deny_claim(
     """
     org = inspect.unwrap(func)
     if not hasattr(org, '__reshut_deny'):
-        setattr(org, '__reshut_deny', {
-            claim_name: claim_check
-        })
-    else:
-        deny_list = cast(dict[str, Any], getattr(org, '__reshut_deny'))
-        deny_list[claim_name] = claim_check
+        setattr(org, '__reshut_deny', list[tuple[str, Any]]())
+    claim_rules = cast(list[tuple[str, Any]], getattr(org, '__reshut_deny'))
+    claim_rules.append((claim_name, claim_check))
     return func
 
 
@@ -84,7 +102,19 @@ def require_claim(
     Adds a REQUIRED claim rule to a handler.
 
     When all required claims are presented, then access is granted.
-    
+
+    Multiple decorators with the same ``claim_name`` are cumulative — each ``@require_claim`` appends a separate rule.
+    At evaluation, all listed claims must match (AND semantics).
+
+    Example — stack decorators with same claim name:
+
+    .. code-block:: python
+
+        @require_claim("role", "admin")
+        @require_claim("scope", "write")
+        def on_delete(self, req, resp):
+            # both role=admin AND scope=write required
+
     :param func: The handler function.
     :param claim_name: Claim name.
     :param claim_check: Optional literal value that the claim must present, or a ``ClaimEvaluator`` that checks the claim is a match.

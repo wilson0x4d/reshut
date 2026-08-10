@@ -42,12 +42,14 @@ class MyResource:
 
 ### Available decorators
 
-| Decorator | Logic | When access is granted |
-|-----------|-------|----------------------|
+| Decorator | Rule logic | When access is granted |
+|-----------|-----------|----------------------|
 | `@allow_anonymous` | Bypass | Always — no auth required |
-| `@require_claim(name, check)` | AND | All listed claims present AND match |
-| `@deny_claim(name, check)` | AND check, OR deny | No listed claim matches (any match = blocked) |
-| `@allow_claim(name, check)` | OR | At least one listed claim matches |
+| `@require_claim(name, check)` | AND | **Every** listed `(name, check)` pair evaluates to `True` — all claims must match |
+| `@deny_claim(name, check)` | AND, OR | No listed claim evaluation returns `True` — any single match blocks access |
+| `@allow_claim(name, check)` | OR | At least one listed claim evaluation returns `True` — if none match, access denied |
+
+When multiple decorator rules apply to the same handler, they are evaluated in a fixed order — **DENY first, then REQUIRED, then ALLOW**. If a DENY rule matches access is blocked immediately regardless of other rules. So `@deny_claim('role', 'read-only')` blocks read-only users even if `@require_claim('role', 'admin')` passes (a read-only user will never have `role=admin`, but any admin who also carries `role=read-only` gets blocked).
 
 ### Claim evaluators
 
@@ -62,6 +64,52 @@ Each decorator takes `claim_name` and optional `claim_check`:
   @require_claim("exp", lambda exp: datetime.now(timezone.utc).timestamp() < exp)
   def on_get(self, req, resp): ...
   ```
+
+### Stacking decorators with the same claim name
+
+The internal storage for claim rules is a list of `(claim_name, claim_check)` tuples. Stacking multiple decorators with the same `claim_name` but different `check` values is supported and cumulative:
+
+```python
+@allow_claim("scope", "read")
+@allow_claim("scope", "write")
+def on_get(self, req, resp):
+    # At least one must match (OR semantics) — "read" OR "write"
+    ...
+```
+
+The same applies to `@deny_claim` and `@require_claim`:
+
+```python
+@deny_claim("scope", "admin-only")
+@deny_claim("scope", "readonly")
+def on_patch(self, req, resp):
+    # Any match blocks (DENY semantics) — blocks if scope is "admin-only" OR "readonly"
+    ...
+```
+
+For `@require_claim`, each decorator adds to the AND set — all listed claims must match:
+
+```python
+@require_claim("role", "admin")
+@require_claim("scope", "write")
+def on_delete(self, req, resp):
+    # Both must match (AND semantics)
+    ...
+```
+
+### Type signatures
+
+All three claim decorators share this signature shape:
+
+```python
+def allow_claim(claim_name: str, claim_check: ClaimEvaluator | Any | None = None, *, is_required: bool = False) -> Callable[[DecoratedT], DecoratedT]: ...
+
+def deny_claim(claim_name: str, claim_check: ClaimEvaluator | Any | None = None) -> Callable[[DecoratedT], DecoratedT]: ...
+
+def require_claim(claim_name: str, claim_check: Any) -> Callable[[DecoratedT], DecoratedT]: ...
+```
+
+`claim_name` is always the first (and only required) positional argument. `claim_check` is the second positional argument and may be `None`, a literal value, or a `ClaimEvaluator` callable. Setting `is_required=True` on `allow_claim` upgrades it to REQUIRED logic (equivalent to `require_claim`).
 
 ### Evaluation order
 
@@ -384,7 +432,69 @@ def on_get(self, req, resp):
 
 ---
 
-## Quick Reference
+## 8. Package Map
+
+Top-level package layout:
+
+```
+src/reshut/
+├── __init__.py          # Algorithm, submodules, __version__, __commit__
+├── __main__.py          # CLI entry point (python -m reshut)
+├── Algorithm.py         # Algorithm StrEnum (11 algorithms)
+├── authorization.py     # Decorator functions
+├── jwk.py               # JWK TypedDicts, enums, conversion functions
+├── utils.py             # keygen, tokenize, validate
+└── middleware/
+    ├── __init__.py      # Re-exports all middleware classes
+    ├── AsgiAuthorizationMiddleware.py  # ASGI middleware
+    ├── AuthorizationEvaluator.py       # Request → TokenEvaluator bridge
+    ├── TokenEvaluator.py               # Single-token validation & claims
+    └── WsgiAuthorizationMiddleware.py # WSGI middleware
+```
+
+### Module exports map
+
+| Module | Exports |
+|--------|---------|
+| `reshut.__init__` | `__version__`, `__commit__`, `Algorithm`, submodules: `authorization`, `jwk`, `middleware`, `utils` |
+| `reshut.Algorithm` | `Algorithm` (StrEnum, 11 members) |
+| `reshut.authorization` | `ClaimEvaluator`, `allow_anonymous`, `allow_claim`, `deny_claim`, `require_claim` |
+| `reshut.jwk` | `JwkUsageType`, `JwkKeyType`, `JwkCurveType`, `RsaJwk`, `EcJwk`, `OkpJwk`, `OctetJwk`, `Jwk`, `from_private_key`, `to_private_key`, `from_public_key`, `to_public_key`, `from_symmetric_key`, `to_symmetric_key` |
+| `reshut.utils` | `keygen`, `tokenize`, `validate` |
+| `reshut.middleware` | `AsgiAuthorizationMiddleware`, `AuthorizationEvaluator`, `TokenEvaluator`, `WsgiAuthorizationMiddleware` |
+| `reshut.middleware.AsgiAuthorizationMiddleware` | `AsgiAuthorizationMiddleware` |
+| `reshut.middleware.AuthorizationEvaluator` | `AuthorizationEvaluator` |
+| `reshut.middleware.TokenEvaluator` | `TokenEvaluator` |
+| `reshut.middleware.WsgiAuthorizationMiddleware` | `WsgiAuthorizationMiddleware` |
+
+### Dependency graph
+
+```
+Algorithm.py (stdlib only)
+    ↑
+jwk.py → Algorithm, cryptography
+    ↑
+utils.py → Algorithm, jwk, jwt, cryptography
+    ↑
+authorization.py (stdlib only)
+    ↑
+middleware/TokenEvaluator.py → authorization, jwk, utils, falcon
+    ↑
+middleware/AuthorizationEvaluator.py → authorization, TokenEvaluator, falcon
+    ↑
+middleware/AsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvaluator, falcon
+middleware/WsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvaluator, falcon
+```
+
+### Import layers
+
+| Layer | Modules | Role |
+|-------|---------|------|
+| 1 | `Algorithm` | Foundation — bare StrEnum, no external deps |
+| 2 | `jwk` | Key representation — depends on Layer 1 |
+| 3 | `utils`, `authorization` | Core operations — token CRUD + decorator metadata |
+| 4 | `middleware/*` | Falcon integration — ties requests to handler claims |
+
 
 | Import from `reshut` | Purpose |
 |----------------------|---------|

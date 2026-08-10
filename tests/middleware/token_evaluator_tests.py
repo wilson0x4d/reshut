@@ -7,7 +7,7 @@ from reshut.authorization import ClaimEvaluator
 from reshut.jwk import Jwk
 from reshut.middleware import TokenEvaluator
 from reshut.utils import Algorithm, keygen, tokenize
-from typing import cast
+from typing import Any, cast
 
 def __make_evaluator() -> tuple[TokenEvaluator, Jwk]:
     key = keygen(Algorithm.HS256)
@@ -23,9 +23,9 @@ def allow_claim_matching() -> None:
     token = tokenize(secret, claims)
 
     # allow_claims requires role == 'admin'
-    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
-    deny: dict[str, str | ClaimEvaluator] = {}
-    require: dict[str, str | ClaimEvaluator] = {}
+    allow: list[tuple[str, Any]] = [('role', 'admin')]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Allowed claim should grant access'
@@ -38,9 +38,9 @@ def allow_claim_missing() -> None:
 
     token = tokenize(secret, claims)
 
-    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
-    deny: dict[str, str | ClaimEvaluator] = {}
-    require: dict[str, str | ClaimEvaluator] = {}
+    allow: list[tuple[str, Any]] = [('role', 'admin')]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -59,9 +59,9 @@ def deny_claim_exact_match() -> None:
 
     token = tokenize(secret, claims)
 
-    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'blocked': True})
-    allow: dict[str, str | ClaimEvaluator] = {}
-    require: dict[str, str | ClaimEvaluator] = {}
+    deny: list[tuple[str, Any]] = [('blocked', True)]
+    allow: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -85,9 +85,9 @@ def deny_claim_custom_evaluator() -> None:
 
     token = tokenize(secret, claims)
 
-    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'score': GreaterThanTen()})
-    allow: dict[str, str | ClaimEvaluator] = {}
-    require: dict[str, str | ClaimEvaluator] = {}
+    deny: list[tuple[str, Any]] = cast(list[tuple[str, Any]], [('score', GreaterThanTen())])
+    allow: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -104,9 +104,9 @@ def require_claim_missing() -> None:
 
     token = tokenize(secret, claims)
 
-    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
-    deny: dict[str, str | ClaimEvaluator] = {}
-    allow: dict[str, str | ClaimEvaluator] = {}
+    require: list[tuple[str, Any]] = [('user', 'bob')]
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -123,9 +123,9 @@ def require_claim_wrong_value() -> None:
 
     token = tokenize(secret, claims)
 
-    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
-    deny: dict[str, str | ClaimEvaluator] = {}
-    allow: dict[str, str | ClaimEvaluator] = {}
+    require: list[tuple[str, Any]] = [('user', 'bob')]
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -148,9 +148,9 @@ def require_claim_success() -> None:
 
     token = tokenize(secret, claims)
 
-    require: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'user': StartsWithA()})
-    deny: dict[str, str | ClaimEvaluator] = {}
-    allow: dict[str, str | ClaimEvaluator] = {}
+    require: list[tuple[str, Any]] = cast(list[tuple[str, Any]], [('user', StartsWithA())])
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'Required claim should allow access'
@@ -163,9 +163,9 @@ def full_flow_success() -> None:
 
     token = tokenize(secret, claims)
 
-    deny: dict[str, str | ClaimEvaluator] = cast(dict[str, str | ClaimEvaluator], {'blocked': False})
-    require: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
-    allow: dict[str, str | ClaimEvaluator] = {'dept': 'sales', 'user': 'bob'}
+    deny: list[tuple[str, Any]] = [('blocked', False)]
+    require: list[tuple[str, Any]] = [('role', 'admin')]
+    allow: list[tuple[str, Any]] = [('dept', 'sales'), ('user', 'bob')]
 
     result = evaluator.evaluate(token, deny, allow, require)
     assert result is True, 'All rules satisfied – should be granted'
@@ -178,9 +178,9 @@ def full_flow_deny_overrides() -> None:
 
     token = tokenize(secret, claims)
 
-    deny: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
-    require: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
-    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    deny: list[tuple[str, Any]] = [('user', 'bob')]
+    require: list[tuple[str, Any]] = [('role', 'admin')]
+    allow: list[tuple[str, Any]] = [('role', 'admin')]
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -197,9 +197,9 @@ def full_flow_require_missing_overrides() -> None:
 
     token = tokenize(secret, claims)
 
-    deny: dict[str, str | ClaimEvaluator] = {}
-    require: dict[str, str | ClaimEvaluator] = {'user': 'bob'}
-    allow: dict[str, str | ClaimEvaluator] = {'role': 'admin'}
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = [('user', 'bob')]
+    allow: list[tuple[str, Any]] = [('role', 'admin')]
 
     try:
         evaluator.evaluate(token, deny, allow, require)
@@ -207,3 +207,71 @@ def full_flow_require_missing_overrides() -> None:
     except falcon.HTTPUnauthorized as exc:
         assert exc.description == 'REQUIRE'
         assert exc.title == 'Authorization Missing'
+
+
+@fact
+def allow_claim_same_name_multiple_checks_cumulative() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'scope': 'read-only'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = [('scope', 'read-only'), ('scope', 'read-write')]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
+
+    result = evaluator.evaluate(token, deny, allow, require)
+    assert result is True, 'First matching scope should grant access'
+
+
+@fact
+def allow_claim_same_name_no_match() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'scope': 'delete'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = [('scope', 'read-only'), ('scope', 'read-write')]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
+
+    try:
+        evaluator.evaluate(token, deny, allow, require)
+        assert False, 'Non-matching scope should deny access' # pragma: no cover
+    except falcon.HTTPUnauthorized as exc:
+        assert exc.description == 'ALLOW'
+        assert exc.title == 'Authorization Disallowed'
+
+
+@fact
+def deny_claim_same_name_multiple_checks_cumulative() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'scope': 'read-only'}
+
+    token = tokenize(secret, claims)
+
+    deny: list[tuple[str, Any]] = [('scope', 'write-only'), ('scope', 'read-only')]
+    allow: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
+
+    try:
+        evaluator.evaluate(token, deny, allow, require)
+        assert False, 'Matching scope should deny access' # pragma: no cover
+    except falcon.HTTPUnauthorized as exc:
+        assert exc.description == 'DENY'
+        assert exc.title == 'Authorization Denied'
+
+
+@fact
+def require_claim_multiple_claims_any_match() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'role': 'admin', 'user': 'bob'}
+
+    token = tokenize(secret, claims)
+
+    require: list[tuple[str, Any]] = [('role', 'admin'), ('user', 'bob')]
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
+
+    result = evaluator.evaluate(token, deny, allow, require)
+    assert result is True, 'All required claims must match'
