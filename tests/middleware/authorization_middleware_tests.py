@@ -3,13 +3,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, cast
+from typing import Any, Mapping, Optional, cast
 
 import falcon
 from punit import theory, inlinedata
-from reshut.middleware.AuthorizationEvaluator import AuthorizationEvaluator
-from reshut.middleware.AsgiAuthorizationMiddleware import AsgiAuthorizationMiddleware
-from reshut.middleware.TokenEvaluator import TokenEvaluator
+from reshut.middleware import AuthorizationEvaluator
+from reshut.middleware import ASGIAuthorizationMiddleware
+from reshut.middleware import TokenEvaluator
 
 
 class _DummyRequest:
@@ -23,14 +23,15 @@ class _DummyRequest:
 
 
 class _DummyHandler:
-    __reshut_allow: Optional[Dict[str, Any]] = None
-    __reshut_deny: Optional[Dict[str, Any]] = None
-    __reshut_require: Optional[Dict[str, Any]] = None
+    __reshut_allow: Optional[list[tuple[str, Any]]] = None
+    __reshut_deny: Optional[list[tuple[str, Any]]] = None
+    __reshut_require: Optional[list[tuple[str, Any]]] = None
 
 
+# type: ignore[override]
 class _StubTokenEvaluator(TokenEvaluator):
     __result: bool
-    __calls: list[tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any]]]
+    __calls: list[tuple[str, list[tuple[str, Any]], list[tuple[str, Any]], list[tuple[str, Any]]]]
 
     def __init__(self, result: bool) -> None:
         self.__result = result
@@ -39,15 +40,15 @@ class _StubTokenEvaluator(TokenEvaluator):
     def evaluate(
         self,
         token: str,
-        deny: Dict[str, Any],
-        allow: Dict[str, Any],
-        require: Dict[str, Any],
+        deny_claims: list[tuple[str, Any]],
+        allow_claims: list[tuple[str, Any]],
+        require_claims: list[tuple[str, Any]],
     ) -> bool:
-        self.__calls.append((token, deny, allow, require))
+        self.__calls.append((token, deny_claims, allow_claims, require_claims))
         return self.__result
 
     @property
-    def calls(self) -> list[tuple[str, Dict[str, Any], Dict[str, Any], Dict[str, Any]]]:
+    def calls(self) -> list[tuple[str, list[tuple[str, Any]], list[tuple[str, Any]], list[tuple[str, Any]]]]:
         return self.__calls
 
 
@@ -63,7 +64,7 @@ def can_interrogate_authorization_methods(with_apikey: bool, with_basic: bool, w
     apikey_token_evaluator = None if not with_apikey else _StubTokenEvaluator(result=True)
     basic_token_evaluator = None if not with_basic else _StubTokenEvaluator(result=True)
     bearer_token_evaluator = None if not with_bearer else _StubTokenEvaluator(result=True)
-    auth_middleware = AsgiAuthorizationMiddleware(
+    auth_middleware = ASGIAuthorizationMiddleware(  # type: ignore[arg-type]
         apikey_token_evaluator,
         basic_token_evaluator,
         bearer_token_evaluator)

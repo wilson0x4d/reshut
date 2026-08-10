@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 import inspect
-from typing import Any, Callable, Optional, TypeAlias, cast
+from typing import Any, Callable, Optional, cast
 
 
-ClaimEvaluator: TypeAlias = Callable[[Any], bool]
+from .claim_evaluator import ClaimEvaluator
 
 
 def allow_anonymous(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -124,7 +124,6 @@ def require_claim(
 
 
 __all__ = [
-    'ClaimEvaluator',
     'allow_anonymous',
     'allow_claim',
     'deny_claim',

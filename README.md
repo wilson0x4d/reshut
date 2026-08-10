@@ -40,7 +40,7 @@ To use `reshut` two things must be done; first you must add an authorization mid
     # you register the middleware, which applies Authorization checks to ALL requests
     symmetric_key = utils.keygen(Algorithm.HS256)
     asymmetric_key = utils.keygen(Algorithm.ED448)
-    app.add_middleware(middleware.AsgiAuthorizationMiddleware(
+    app.add_middleware(middleware.ASGIAuthorizationMiddleware(
         apikey_evaluater=middleware.TokenEvaluator(symmetric_key),
         bearer_evaluater=middleware.TokenEvaluator(asymmetric_key)
     ))

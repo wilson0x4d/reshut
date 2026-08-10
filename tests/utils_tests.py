@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta, timezone
 import uuid
 from punit import fact, theory, inlinedata, collections, exceptions
-from reshut.jwk import Jwk
+from reshut.jwk import JWK
 from reshut.utils import Algorithm, keygen, tokenize, validate
 from typing import cast
 

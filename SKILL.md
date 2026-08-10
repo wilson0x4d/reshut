@@ -128,20 +128,20 @@ Two middleware classes intercept requests before handler execution. Install on t
 
 ```python
 import falcon
-from reshut.middleware import AsgiAuthorizationMiddleware, WsgiAuthorizationMiddleware
+from reshut.middleware import ASGIAuthorizationMiddleware, WSGIAuthorizationMiddleware
 
 # ASGI app
-app = falcon.App(middleware=[AsgiAuthorizationMiddleware(jwk=my_key)])
+app = falcon.App(middleware=[ASGIAuthorizationMiddleware(jwk=my_key)])
 
 # WSGI app
-app = falcon.App(middleware=[WsgiAuthorizationMiddleware(jwk=my_key)])
+app = falcon.App(middleware=[WSGIAuthorizationMiddleware(jwk=my_key)])
 ```
 
 ### Constructor parameters
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `jwk` | `Jwk` | *(required)* | The JWK to validate tokens |
+| `jwk` | `JWK` | *(required)* | The JWK to validate tokens |
 | `algorithm` | `Algorithm` | Auto-detected from JWK | Signing algorithm |
 | `enforce` | `bool` | `True` | Enforce `exp` and `nbf` claims |
 | `audience` | `Optional[str]` | `None` | Expected `aud` claim |
@@ -175,19 +175,19 @@ Request → Middleware.process_resource
 
 11 cryptographic algorithms via the `Algorithm` StrEnum (also usable as plain strings):
 
-| Algorithm | Type | Key | Performance |
+| Algorithm | Type | Key | Performance (higher → faster) |
 |-----------|------|-----|-------------|
-| `HS256` | HMAC + SHA-256 | Symmetric (secret) | Fast |
-| `HS384` | HMAC + SHA-384 | Symmetric (secret) | Fast |
-| `HS512` | HMAC + SHA-512 | Symmetric (secret) | Fast |
-| `RS256` | RSA + SHA-256 | Asymmetric (public/private) | Medium |
-| `RS384` | RSA + SHA-384 | Asymmetric (public/private) | Medium |
-| `RS512` | RSA + SHA-512 | Asymmetric (public/private) | Medium |
-| `ES256` | ECDSA + SHA-256 (P-256) | Asymmetric (public/private) | Medium |
-| `ES384` | ECDSA + SHA-384 (P-384) | Asymmetric (public/private) | Slower |
-| `ES512` | ECDSA + SHA-512 (P-521) | Asymmetric (public/private) | Slower |
-| `ED25519` | EdDSA (Edwards25519) | Asymmetric (public/private) | Fast |
-| `ED448` | EdDSA (Edwards448) | Asymmetric (public/private) | Medium |
+| `HS256` | HMAC + SHA-256 | Symmetric (secret) | 9 |
+| `HS384` | HMAC + SHA-384 | Symmetric (secret) | 8 |
+| `HS512` | HMAC + SHA-512 | Symmetric (secret) | 7 |
+| `ED25519` | EdDSA (Edwards25519) | Asymmetric (public/private) | 6 |
+| `ED448` | EdDSA (Edwards448) | Asymmetric (public/private) | 5 |
+| `ES256` | ECDSA + SHA-256 (P-256) | Asymmetric (public/private) | 4 |
+| `ES384` | ECDSA + SHA-384 (P-384) | Asymmetric (public/private) | 3 |
+| `ES512` | ECDSA + SHA-512 (P-521) | Asymmetric (public/private) | 2 |
+| `RS256` | RSA + SHA-256 | Asymmetric (public/private) | 1 |
+| `RS384` | RSA + SHA-384 | Asymmetric (public/private) | 1 |
+| `RS512` | RSA + SHA-512 | Asymmetric (public/private) | 1 |
 
 ---
 
@@ -196,39 +196,39 @@ Request → Middleware.process_resource
 JWK (JSON Web Key) types are defined as TypedDicts with Literal discrimination:
 
 ```python
-from reshut.jwk import RsaJwk, EcJwk, OkpJwk, OctetJwk, Jwk, JwkKeyType
+from reshut.jwk import RSAJWK, ECJWK, OKPJWK, OctetJWK, JWK, JWKKeyType
 
 # Discriminate by kty
 match jwk:
-    case {"kty": "RSA"} as rsa: ...  # RsaJwk
-    case {"kty": "EC"} as ec: ...    # EcJwk
-    case {"kty": "OKP"} as okp: ...  # OkpJwk
-    case {"kty": "oct"} as octj: ... # OctetJwk
+    case {"kty": "RSA"} as rsa: ...  # RSAJWK
+    case {"kty": "EC"} as ec: ...    # ECJWK
+    case {"kty": "OKP"} as okp: ...  # OKPJWK
+    case {"kty": "oct"} as octj: ... # OctetJWK
 ```
 
 ### Key field types
 
 | Type | `kty` | Fields |
 |------|-------|--------|
-| `RsaJwk` | `"RSA"` | `kty, kid?, use?, alg?, n, e, d, p, q, dp, dq, qi?` |
-| `EcJwk` | `"EC"` | `kty, kid?, use?, alg?, crv, x, y, d?` |
-| `OkpJwk` | `"OKP"` | `kty, kid?, use?, alg?, crv, x, d?` |
-| `OctetJwk` | `"oct"` | `kty, kid?, use?, alg?, k` |
+| `RSAJWK` | `"RSA"` | `kty, kid?, use?, alg?, n, e, d, p, q, dp, dq, qi?` |
+| `ECJWK` | `"EC"` | `kty, kid?, use?, alg?, crv, x, y, d?` |
+| `OKPJWK` | `"OKP"` | `kty, kid?, use?, alg?, crv, x, d?` |
+| `OctetJWK` | `"oct"` | `kty, kid?, use?, alg?, k` |
 
-### Key conversion utilities
+### Key conversion utilities (in `reshut.jwk.utils`)
 
 | Function | Purpose |
 |----------|---------|
-| `from_private_key(algorithm, key)` | cryptography private key → JWK |
+| `from_private_key(algorithm, key, *, usage, key_id)` | cryptography private key → JWK |
 | `to_private_key(jwk)` | JWK → cryptography private key |
-| `from_public_key(algorithm, key)` | cryptography public key → JWK |
+| `from_public_key(algorithm, key, *, usage, key_id)` | cryptography public key → JWK |
 | `to_public_key(jwk)` | JWK → cryptography public key |
-| `from_symmetric_key(algorithm, key)` | bytes/string → OctetJwk |
-| `to_symmetric_key(jwk)` | OctetJwk → raw bytes |
+| `from_symmetric_key(algorithm, key, *, usage, key_id)` | bytes/string → OctetJWK |
+| `to_symmetric_key(jwk)` | OctetJWK → raw bytes |
 
 ```python
 from cryptography.hazmat.primitives.asymmetric import rsa
-from reshut.jwk import from_private_key, to_public_key, Algorithm
+from reshut.jwk.utils import from_private_key, to_public_key, Algorithm
 
 private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 jwk = from_private_key(Algorithm.RS256, private_key)  # JWK dict
@@ -242,7 +242,7 @@ public_key = to_public_key(jwk)  # cryptography RSAPublicKey
 
 High-level token operations in `reshut.utils`:
 
-### `keygen(algorithm, *, key_size: Optional[int] = None) -> Jwk`
+### `keygen(algorithm, *, key_size: Optional[int] = None) -> JWK`
 
 Generates a new JWK for the given algorithm.
 
@@ -261,18 +261,18 @@ ed_jwk = keygen(Algorithm.ED25519)
 
 For RSA/ECDSA, pass `key_size` to control key length.
 
-### `tokenize(key: Jwk, claims: dict, *, ..., algorithm: Optional[str] = None, headers: Optional[dict] = None) -> str`
+### `tokenize(key: JWK, claims: dict, *, ..., algorithm: Optional[str] = None, headers: Optional[dict] = None) -> str`
 
 Creates a signed JWT. Standard claims are injected automatically:
 
 | Param | Type | Default | JWT claim |
 |-------|------|---------|-----------|
-| `audience` | `Optional[str]` | `None` | `aud` |
+| `audience` | `Optional[str | list[str]]` | `None` | `aud` |
 | `issuer` | `Optional[str]` | `None` | `iss` |
 | `subject` | `Optional[str]` | `None` | `sub` |
-| `expiry` | `Optional[float \| timedelta]` | `None` | `exp` |
-| `not_before` | `Optional[float \| timedelta]` | `None` | `nbf` |
-| `issued_at` | `Optional[float]` | `None` | `iat` |
+| `expiry` | `Optional[int]` | `None` | `exp` (unix timestamp) |
+| `not_before` | `Optional[int]` | `None` | `nbf` (unix timestamp) |
+| `issued_at` | `Optional[int]` | `None` | `iat` (auto-filled if absent) |
 | `token_id` | `Optional[str]` | `None` | `jti` |
 
 ```python
@@ -281,96 +281,94 @@ jwt_token = tokenize(
     claims={"user_id": 42, "role": "admin"},
     audience="my-api",
     issuer="auth-server",
-    expiry=600,  # seconds
+    expiry=1699999999,  # unix timestamp
 )
 ```
 
-### `validate(key: Jwk, token: str, *, ..., algorithm: Optional[str] = None, enforce: Optional[bool] = None) -> dict`
+### `validate(key: JWK, token: str, *, enforce: bool = True, audience: Optional[str] = None, issuer: Optional[str] = None, subject: Optional[str] = None) -> dict[str, Any]`
 
 Decodes, verifies, and returns the claims dict.
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enforce` | `Optional[bool]` | `True` | Enforce `exp` and `nbf` claims |
+| `enforce` | `bool` | `True` | Enforce `exp` and `nbf` claims |
 | `audience` | `Optional[str]` | `None` | Expected `aud` claim |
 | `issuer` | `Optional[str]` | `None` | Expected `iss` claim |
 | `subject` | `Optional[str]` | `None` | Expected `sub` claim |
 
 ```python
-from cryptography.exceptions import InvalidSignature
-import jwt as pyjwt
-
 try:
     claims = validate(public_jwk, token, audience="my-api")
     print(claims["user_id"])  # 42
-except pyjwt.InvalidTokenError:
-    print("token expired")
-except InvalidSignature:
-    print("invalid signature")
+except Exception:
+    print("token invalid or claims mismatch")
 ```
+
+`validate` raises plain `Exception` with human-readable error messages (e.g., `'token has expired (exp check failed)'`, `'audience is incorrect.'`). It does not raise `pyjwt.InvalidTokenError` or `cryptography.exceptions.InvalidSignature`.
 
 ---
 
 ## 6. CLI Tools
 
-Three binaries installed with reshut:
+The CLI is invoked via `python -m reshut` with subcommands. Note: `claim_check` values for decorators must be passable to `str()` — all `int` values work. `list` values (e.g. for `aud`) require using `@allow_claim` with a raw (unquoted) JSON value, as the CLI does not support JSON value escaping:
+```bash
+reshut-tokenize secret.jwk --claims '{"aud": 12345}'
+```
+```python
+@allow_claim("aud", lambda c: str(c) == "12345")
+```
+Wrapper scripts `reshut-keygen`, `reshut-tokenize`, `reshut-validate` are installed as data-files under `bin/`.
 
-### `reshut-keygen`
+### `reshut keygen`
 
-Generate a private key and write to a `.jwk` file.
+Generate a JWK and write to a `.jwk` file.
 
 ```bash
-# Symmetric key
-reshut-keygen HS256 -o secret.jwk
+python -m reshut keygen --type HS256 --output secret
+# Writes: secret.jwk
 
-# RSA key
-reshut-keygen RS256 -o rsa.jwk
+python -m reshut keygen --type ES256 --output ec
+# Writes: ec.jwk
 
-# EC key
-reshut-keygen ES256 -o ec.jwk
-
-# EdDSA key
-reshut-keygen ED25519 -o eddsa.jwk
+python -m reshut keygen --type ED25519 --output eddsa
+# Writes: eddsa.jwk
 ```
 
-Options: `-o` / `--output` output file, `-a` / `--algorithm` (default from key type), `--key-size` for RSA/ECDSA.
+Arguments:
+| Flag | Description |
+|------|-------------|
+| `--type` | Algorithm name (e.g. `HS256`, `RS256`) — required |
+| `--output` | Base filename (prefix) for generated key files — required |
 
-### `reshut-tokenize`
+### `reshut tokenize`
 
 Create a JWT from claims + key file.
 
 ```bash
-reshut-tokenize secret.jwk --claim user_id=42 --claim role=admin --aud my-api
+python -m reshut tokenize --key secret.jwk --claims '{"user_id": 42, "role": "admin"}'
 ```
 
-Options:
+Arguments:
 | Flag | Description |
 |------|-------------|
-| `--claim` | Claim in `key=value` format (repeatable) |
-| `--aud` | `aud` (audience) |
-| `--iss` | `iss` (issuer) |
-| `--sub` | `sub` (subject) |
-| `--exp` | Expiry in seconds from now |
-| `--nbf` | Not-before in seconds from now |
-| `-a` | Algorithm override |
-| `--alg` | Same as `-a` |
+| `--key` | Path to the JWK key file — required |
+| `--claims` | JSON string representing the claim set (must be a JSON object) — required |
 
-### `reshut-validate`
+### `reshut validate`
 
 Validate a token and print decoded claims.
 
 ```bash
-reshut-validate secret.jwk <token_string> --aud my-api
+python -m reshut validate --key secret.jwk --token <token_string>
 ```
 
-Options:
+Arguments:
 | Flag | Description |
 |------|-------------|
-| `--aud` | Expected audience |
-| `--iss` | Expected issuer |
-| `--sub` | Expected subject |
-| `-a` / `--alg` | Algorithm |
-| `--no-enforce` | Skip exp/nbf enforcement |
+| `--key` | Path to the JWK key file — required |
+| `--token` | JWT string to validate — required |
+
+Returns: JSON-encoded claims (sorted, indented) on success, or an error message on stderr on failure. Non-zero exit codes: 2 (unsupported algorithm), 3 (key file read error), 5 (invalid claims JSON), 7 (token validation failed).
 
 ---
 
@@ -380,11 +378,13 @@ Options:
 
 ```python
 import falcon
-from reshut.middleware import AsgiAuthorizationMiddleware
+from reshut.middleware import ASGIAuthorizationMiddleware, TokenEvaluator
 from reshut.authorization import require_claim, allow_anonymous
 from reshut.utils import keygen
+from reshut import Algorithm
 
-key = keygen("HS256")
+key = keygen(Algorithm.ES256)
+token_evaluator = TokenEvaluator(key)
 
 class PublicResource:
     @allow_anonymous
@@ -397,7 +397,7 @@ class AdminResource:
         resp.media = {"data": "secret"}
 
 app = falcon.App(
-    middleware=[AsgiAuthorizationMiddleware(jwk=key)]
+    middleware=[ASGIAuthorizationMiddleware(bearer_token_evaluator=token_evaluator)]
 )
 app.add_route("/public", PublicResource())
 app.add_route("/admin", AdminResource())
@@ -406,16 +406,14 @@ app.add_route("/admin", AdminResource())
 ### Token revocation
 
 ```python
-from reshut.middleware import AsgiAuthorizationMiddleware
+from reshut.middleware import ASGIAuthorizationMiddleware, TokenEvaluator
 
-revoked_tokens = {"token_123", "token_456"}
-
-def revocation_evaluator(token_id: str | None) -> bool:
-    return token_id in revoked_tokens
-
-middleware = AsgiAuthorizationMiddleware(
-    jwk=key,
-    revocation_evaluator=revocation_evaluator
+# A revocation evaluator re-validates the token (which may contain
+# a revocation flag or jti). Any TokenEvaluator can serve as the
+# revocation check since it always validates the token's signature.
+middleware = ASGIAuthorizationMiddleware(
+    bearer_token_evaluator=TokenEvaluator(key),
+    revokation_evaluator=TokenEvaluator(key)  # note: "revokation"
 )
 ```
 
@@ -440,16 +438,31 @@ Top-level package layout:
 src/reshut/
 ├── __init__.py          # Algorithm, submodules, __version__, __commit__
 ├── __main__.py          # CLI entry point (python -m reshut)
-├── Algorithm.py         # Algorithm StrEnum (11 algorithms)
-├── authorization.py     # Decorator functions
-├── jwk.py               # JWK TypedDicts, enums, conversion functions
+├── algorithm.py         # Algorithm StrEnum (11 algorithms)
+├── py.typed             # PEP 561 marker
 ├── utils.py             # keygen, tokenize, validate
+├── authorization/
+│   ├── __init__.py      # Re-exports decorators and ClaimEvaluator
+│   ├── claim_evaluator.py  # ClaimEvaluator type alias
+│   └── decorators.py       # allow_anonymous, allow_claim, deny_claim, require_claim
+├── jwk/
+│   ├── __init__.py      # Re-exports JWK types and utils
+│   ├── jwk.py               # JWK union type
+│   ├── _jwk.py              # _JWK base TypedDict (kid, use, alg)
+│   ├── rsa_jwk.py         # RSAJWK TypedDict
+│   ├── ec_jwk.py          # ECJWK TypedDict
+│   ├── okp_jwk.py         # OKPJWK TypedDict
+│   ├── octet_jwk.py       # OctetJWK TypedDict
+│   ├── jwk_key_type.py    # JWKKeyType StrEnum (RSA, EC, OKP, OCT)
+│   ├── jwk_curve_type.py  # JWKCurveType StrEnum (P256, P384, P521, ED25519, ED448)
+│   ├── jwk_usage_type.py  # JWKUsageType StrEnum (SIG, ENC)
+│   └── utils.py           # Key conversion functions
 └── middleware/
     ├── __init__.py      # Re-exports all middleware classes
-    ├── AsgiAuthorizationMiddleware.py  # ASGI middleware
-    ├── AuthorizationEvaluator.py       # Request → TokenEvaluator bridge
-    ├── TokenEvaluator.py               # Single-token validation & claims
-    └── WsgiAuthorizationMiddleware.py # WSGI middleware
+    ├── asgi_authorization_middleware.py  # ASGI middleware
+    ├── authorization_evaluator.py        # Request → TokenEvaluator bridge
+    ├── token_evaluator.py               # Single-token validation & claims
+    └── wsgi_authorization_middleware.py # WSGI middleware
 ```
 
 ### Module exports map
@@ -457,41 +470,46 @@ src/reshut/
 | Module | Exports |
 |--------|---------|
 | `reshut.__init__` | `__version__`, `__commit__`, `Algorithm`, submodules: `authorization`, `jwk`, `middleware`, `utils` |
-| `reshut.Algorithm` | `Algorithm` (StrEnum, 11 members) |
+| `reshut.algorithm` | `Algorithm` (StrEnum, 11 members) |
 | `reshut.authorization` | `ClaimEvaluator`, `allow_anonymous`, `allow_claim`, `deny_claim`, `require_claim` |
-| `reshut.jwk` | `JwkUsageType`, `JwkKeyType`, `JwkCurveType`, `RsaJwk`, `EcJwk`, `OkpJwk`, `OctetJwk`, `Jwk`, `from_private_key`, `to_private_key`, `from_public_key`, `to_public_key`, `from_symmetric_key`, `to_symmetric_key` |
+| `reshut.jwk` | `JWKUsageType`, `JWKKeyType`, `JWKCurveType`, `RSAJWK`, `ECJWK`, `OKPJWK`, `OctetJWK`, `JWK`, `utils` |
+| `reshut.jwk.utils` | `from_private_key`, `to_private_key`, `from_public_key`, `to_public_key`, `from_symmetric_key`, `to_symmetric_key` |
 | `reshut.utils` | `keygen`, `tokenize`, `validate` |
-| `reshut.middleware` | `AsgiAuthorizationMiddleware`, `AuthorizationEvaluator`, `TokenEvaluator`, `WsgiAuthorizationMiddleware` |
-| `reshut.middleware.AsgiAuthorizationMiddleware` | `AsgiAuthorizationMiddleware` |
+| `reshut.middleware` | `ASGIAuthorizationMiddleware`, `AuthorizationEvaluator`, `TokenEvaluator`, `WSGIAuthorizationMiddleware` |
+| `reshut.middleware.ASGIAuthorizationMiddleware` | `ASGIAuthorizationMiddleware` |
 | `reshut.middleware.AuthorizationEvaluator` | `AuthorizationEvaluator` |
 | `reshut.middleware.TokenEvaluator` | `TokenEvaluator` |
-| `reshut.middleware.WsgiAuthorizationMiddleware` | `WsgiAuthorizationMiddleware` |
+| `reshut.middleware.WSGIAuthorizationMiddleware` | `WSGIAuthorizationMiddleware` |
 
 ### Dependency graph
 
 ```
-Algorithm.py (stdlib only)
-    ↑
-jwk.py → Algorithm, cryptography
-    ↑
-utils.py → Algorithm, jwk, jwt, cryptography
-    ↑
-authorization.py (stdlib only)
-    ↑
-middleware/TokenEvaluator.py → authorization, jwk, utils, falcon
-    ↑
-middleware/AuthorizationEvaluator.py → authorization, TokenEvaluator, falcon
-    ↑
-middleware/AsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvaluator, falcon
-middleware/WsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvaluator, falcon
+algorithm.py (stdlib only)
+    ^
+jwk/_jwk.py -> algorithm, jwk_usage_type
+jwk/*_jwk.py -> _jwk + specific types (jwk_key_type, jwk_curve_type)
+jwk/utils.py -> algorithm, jwk types, cryptography
+jwk/__init__.py -> all JWK types + utils
+    ^
+utils.py -> algorithm, jwk, pyjwt, cryptography
+    ^
+authorization/claim_evaluator.py (stdlib only)
+authorization/decorators.py -> claim_evaluator
+    ^
+middleware/token_evaluator.py -> authorization, jwk, utils, falcon
+    ^
+middleware/authorization_evaluator.py -> token_evaluator, falcon
+    ^
+middleware/asgi_authorization_middleware.py -> authorization_evaluator, token_evaluator, falcon
+middleware/wsgi_authorization_middleware.py -> authorization_evaluator, token_evaluator, falcon
 ```
 
 ### Import layers
 
 | Layer | Modules | Role |
 |-------|---------|------|
-| 1 | `Algorithm` | Foundation — bare StrEnum, no external deps |
-| 2 | `jwk` | Key representation — depends on Layer 1 |
+| 1 | `algorithm` | Foundation — bare StrEnum, no external deps |
+| 2 | `jwk/*` | Key representation — depends on Layer 1 |
 | 3 | `utils`, `authorization` | Core operations — token CRUD + decorator metadata |
 | 4 | `middleware/*` | Falcon integration — ties requests to handler claims |
 
@@ -504,15 +522,15 @@ middleware/WsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvalu
 | `authorization.deny_claim` | Deny if any claim matches |
 | `authorization.require_claim` | Require all claims to match |
 | `authorization.ClaimEvaluator` | Type alias `Callable[[Any], bool]` |
-| `jwk.RsaJwk, EcJwk, OkpJwk, OctetJwk` | JWK TypedDict types |
-| `jwk.Jwk` | Union of all JWK types |
-| `jwk.from_private_key()` | Key object → JWK |
-| `jwk.to_public_key()` | JWK → key object |
+| `jwk.RSAJWK, ECJWK, OKPJWK, OctetJWK` | JWK TypedDict types |
+| `jwk.JWK` | Union of all JWK types |
+| `jwk.utils.from_private_key()` | Key object → JWK |
+| `jwk.utils.to_public_key()` | JWK → key object |
 | `utils.keygen()` | Generate new JWK |
 | `utils.tokenize()` | Sign JWT |
 | `utils.validate()` | Decode & verify JWT |
-| `middleware.AsgiAuthorizationMiddleware` | ASGI middleware |
-| `middleware.WsgiAuthorizationMiddleware` | WSGI middleware |
+| `middleware.ASGIAuthorizationMiddleware` | ASGI middleware |
+| `middleware.WSGIAuthorizationMiddleware` | WSGI middleware |
 | `middleware.TokenEvaluator` | Core token + claim evaluation |
 | `middleware.AuthorizationEvaluator` | Request → claim rule bridge |
 
@@ -520,6 +538,6 @@ middleware/WsgiAuthorizationMiddleware.py → AuthorizationEvaluator, TokenEvalu
 
 | Binary | Purpose |
 |--------|---------|
-| `reshut-keygen` | Generate JWK file |
-| `reshut-tokenize` | Create signed JWT |
-| `reshut-validate` | Decode & verify JWT |
+| `reshut keygen` | Generate JWK file |
+| `reshut tokenize` | Create signed JWT |
+| `reshut validate` | Decode & verify JWT |

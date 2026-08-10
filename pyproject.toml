@@ -26,6 +26,7 @@ dev = [
     "coverage",
     "mypy",
     "punit (>=1.13.3)",
+    "py-conventional-semver (>=1.3.4)",
     "twine"
 ]
 

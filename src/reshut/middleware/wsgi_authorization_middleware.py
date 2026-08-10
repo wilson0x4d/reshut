@@ -2,17 +2,17 @@
 # SPDX-License-Identifier: MIT
 
 import falcon
-from falcon._typing import AsgiMiddlewareWithProcessResource
+from falcon._typing import WsgiMiddlewareWithProcessResource
 import inspect
 from typing import Any, Mapping, Optional, cast
 
-from .AuthorizationEvaluator import AuthorizationEvaluator
-from .TokenEvaluator import TokenEvaluator
+from .authorization_evaluator import AuthorizationEvaluator
+from .token_evaluator import TokenEvaluator
 
 
-class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
+class WSGIAuthorizationMiddleware(WsgiMiddlewareWithProcessResource):
     """
-    ASGI-compatible Authorization Middleware
+    WSGI-compatible Authorization Middleware
 
     ---
     Intercepts resource requests to apply Authorization logic.
@@ -51,7 +51,7 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
     def supports_revokation(self) -> bool:
         return self.__authorization_evaluator.supports_revokation is True
 
-    async def process_resource(
+    def process_resource(
         self,
         req: falcon.Request,
         resp: falcon.Response,
@@ -72,4 +72,4 @@ class AsgiAuthorizationMiddleware(AsgiMiddlewareWithProcessResource):
         self.__authorization_evaluator.evaluate(req, handler)
 
 
-__all__ = ['AsgiAuthorizationMiddleware']
+__all__ = ['WSGIAuthorizationMiddleware']

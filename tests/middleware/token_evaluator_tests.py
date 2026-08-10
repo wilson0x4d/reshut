@@ -4,12 +4,12 @@
 import falcon
 from punit import fact
 from reshut.authorization import ClaimEvaluator
-from reshut.jwk import Jwk
+from reshut.jwk import JWK
 from reshut.middleware import TokenEvaluator
 from reshut.utils import Algorithm, keygen, tokenize
 from typing import Any, cast
 
-def __make_evaluator() -> tuple[TokenEvaluator, Jwk]:
+def __make_evaluator() -> tuple[TokenEvaluator, JWK]:
     key = keygen(Algorithm.HS256)
     evaluator = TokenEvaluator(key)
     return evaluator, key

@@ -4,8 +4,7 @@
 import falcon
 from typing import Any, Optional, cast
 
-from ..authorization import ClaimEvaluator
-from .TokenEvaluator import TokenEvaluator
+from .token_evaluator import TokenEvaluator
 
 class AuthorizationEvaluator:
     """

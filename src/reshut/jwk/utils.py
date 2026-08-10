@@ -1,87 +1,16 @@
 # SPDX-FileCopyrightText: © 2026 Shaun Wilson
 # SPDX-License-Identifier: MIT
 
-from __future__ import annotations
-
 import base64
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
-from enum import StrEnum, unique
-from typing import Literal, Optional, TypedDict, Union, cast
-from .Algorithm import Algorithm
+from typing import Optional, cast
 
-
-@unique
-class JwkUsageType(StrEnum):
-    """
-    JWK Use
-    """
-    SIG = 'sig'
-    ENC = 'enc'
-
-
-@unique
-class JwkKeyType(StrEnum):
-    """
-    JWK Key Type
-    """
-    RSA = 'RSA'
-    EC = 'EC'
-    OKP = 'OKP'
-    OCT = 'oct'
-
-
-@unique
-class JwkCurveType(StrEnum):
-    P256 = 'P-256'
-    P384 = 'P-384'
-    P521 = 'P-521'
-    ED25519 = 'Ed25519'
-    ED448 = 'Ed448'
-
-
-class _Jwk(TypedDict, total=False):
-    kid: str
-    use: JwkUsageType
-    alg: Algorithm
-
-
-class RsaJwk(_Jwk, total=False):
-    kty: Literal[JwkKeyType.RSA]
-    n: str
-    e: str
-    # prikey fields
-    d: str
-    p: str
-    q: str
-    dp: str
-    dq: str
-    qi: str
-
-
-class EcJwk(_Jwk, total=False):
-    kty: Literal[JwkKeyType.EC]
-    crv: Literal[JwkCurveType.P256, JwkCurveType.P384, JwkCurveType.P521]
-    x: str
-    y: str
-    # prikey fields
-    d: str
-
-
-class OkpJwk(_Jwk, total=False):
-    kty: Literal[JwkKeyType.OKP]
-    crv: Literal[JwkCurveType.ED25519, JwkCurveType.ED448]
-    x: str
-    # prikey fields
-    d: str
-
-
-class OctetJwk(_Jwk, total=False):
-    kty: Literal[JwkKeyType.OCT]
-    k: str
-
-
-Jwk = Union[RsaJwk, EcJwk, OkpJwk, OctetJwk]
+from ..algorithm import Algorithm
+from .jwk import JWK
+from .jwk_curve_type import JWKCurveType
+from .jwk_key_type import JWKKeyType
+from .jwk_usage_type import JWKUsageType
 
 
 def __b64_from_bytes(data: bytes) -> str:
@@ -104,11 +33,12 @@ def __b64_to_int(b64: str) -> int:
 def from_private_key(
     algorithm: Algorithm,
     key: rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey | ed448.Ed448PrivateKey,
-    usage: JwkUsageType = JwkUsageType.SIG,
+    usage: JWKUsageType = JWKUsageType.SIG,
     key_id: Optional[str] = None
-) -> Jwk:
-    result: Jwk
+) -> JWK:
+    result: JWK
     if isinstance(key, ed448.Ed448PrivateKey):
+        from .okp_jwk import OKPJWK
         ed448_priv = key.private_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PrivateFormat.Raw,
@@ -118,15 +48,16 @@ def from_private_key(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        result = OkpJwk(
-            kty=JwkKeyType.OKP,
-            crv=JwkCurveType.ED448,
+        result = OKPJWK(
+            kty=JWKKeyType.OKP,
+            crv=JWKCurveType.ED448,
             x=__b64_from_bytes(ed448_pub),
             d=__b64_from_bytes(ed448_priv),
             alg=algorithm,
             use=usage
         )
     elif isinstance(key, ed25519.Ed25519PrivateKey):
+        from .okp_jwk import OKPJWK
         ed25519_priv = key.private_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PrivateFormat.Raw,
@@ -136,20 +67,21 @@ def from_private_key(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        result = OkpJwk(
-            kty=JwkKeyType.OKP,
-            crv=JwkCurveType.ED25519,
+        result = OKPJWK(
+            kty=JWKKeyType.OKP,
+            crv=JWKCurveType.ED25519,
             x=__b64_from_bytes(ed25519_pub),
             d=__b64_from_bytes(ed25519_priv),
             alg=algorithm,
             use=usage
         )
     elif isinstance(key, ec.EllipticCurvePrivateKey):
+        from .ec_jwk import ECJWK
         ec_public = key.private_numbers().public_numbers
         ec_private = key.private_numbers().private_value
-        result = EcJwk(
-            kty=JwkKeyType.EC,
-            crv=JwkCurveType.P256 if key.curve.name == 'secp256r1' else JwkCurveType.P384 if key.curve.name == 'secp384r1' else JwkCurveType.P521,
+        result = ECJWK(
+            kty=JWKKeyType.EC,
+            crv=JWKCurveType.P256 if key.curve.name == 'secp256r1' else JWKCurveType.P384 if key.curve.name == 'secp384r1' else JWKCurveType.P521,
             x=__b64_from_int(ec_public.x),
             y=__b64_from_int(ec_public.y),
             d=__b64_from_int(ec_private),
@@ -157,10 +89,11 @@ def from_private_key(
             use=usage
         )
     elif isinstance(key, rsa.RSAPrivateKey):
+        from .rsa_jwk import RSAJWK
         rsa_priv = key.private_numbers()
         rsa_pub = rsa_priv.public_numbers
-        result = RsaJwk(
-            kty=JwkKeyType.RSA,
+        result = RSAJWK(
+            kty=JWKKeyType.RSA,
             n=__b64_from_int(rsa_pub.n),
             e=__b64_from_int(rsa_pub.e),
             d=__b64_from_int(rsa_priv.d),
@@ -179,10 +112,11 @@ def from_private_key(
     return result
 
 
-def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey | ed448.Ed448PrivateKey:
-    match JwkKeyType(jwk['kty']):
-        case JwkKeyType.RSA:
-            rsa_jwk = cast(RsaJwk, jwk)
+def to_private_key(jwk: JWK) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey | ed448.Ed448PrivateKey:
+    match JWKKeyType(jwk['kty']):
+        case JWKKeyType.RSA:
+            from .rsa_jwk import RSAJWK
+            rsa_jwk = cast(RSAJWK, jwk)
             rsa_private = rsa.RSAPrivateNumbers(
                 p=__b64_to_int(rsa_jwk['p']),
                 q=__b64_to_int(rsa_jwk['q']),
@@ -196,12 +130,13 @@ def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey |
                 )
             )
             return rsa_private.private_key()
-        case JwkKeyType.EC:
-            ec_jwk = cast(EcJwk, jwk)
+        case JWKKeyType.EC:
+            from .ec_jwk import ECJWK
+            ec_jwk = cast(ECJWK, jwk)
             curve = {
-                JwkCurveType.P256: ec.SECP256R1(),
-                JwkCurveType.P384: ec.SECP384R1(),
-                JwkCurveType.P521: ec.SECP521R1(),
+                JWKCurveType.P256: ec.SECP256R1(),
+                JWKCurveType.P384: ec.SECP384R1(),
+                JWKCurveType.P521: ec.SECP521R1(),
             }[ec_jwk['crv']]
             ec_private = ec.EllipticCurvePrivateNumbers(
                 private_value=__b64_to_int(ec_jwk['d']),
@@ -212,13 +147,14 @@ def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey |
                 )
             )
             return ec_private.private_key()
-        case JwkKeyType.OKP:
-            okp_jwk = cast(OkpJwk, jwk)
+        case JWKKeyType.OKP:
+            from .okp_jwk import OKPJWK
+            okp_jwk = cast(OKPJWK, jwk)
             raw = __b64_to_bytes(okp_jwk['d'])
-            match JwkCurveType(okp_jwk['crv']):
-                case JwkCurveType.ED25519:
+            match JWKCurveType(okp_jwk['crv']):
+                case JWKCurveType.ED25519:
                     return ed25519.Ed25519PrivateKey.from_private_bytes(raw)
-                case JwkCurveType.ED448:
+                case JWKCurveType.ED448:
                     return ed448.Ed448PrivateKey.from_private_bytes(raw)
                 case _:
                     raise ValueError('Unsupported OKP Curve')
@@ -229,48 +165,52 @@ def to_private_key(jwk: Jwk) -> rsa.RSAPrivateKey | ec.EllipticCurvePrivateKey |
 def from_public_key(
     algorithm: Algorithm,
     key: rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed25519.Ed25519PublicKey | ed448.Ed448PublicKey,
-    usage: JwkUsageType = JwkUsageType.SIG,
+    usage: JWKUsageType = JWKUsageType.SIG,
     key_id: Optional[str] = None
-) -> Jwk:
-    result: Jwk
+) -> JWK:
+    result: JWK
     if isinstance(key, ed448.Ed448PublicKey):
+        from .okp_jwk import OKPJWK
         ed448_pub = key.public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        result = OkpJwk(
-            kty=JwkKeyType.OKP,
-            crv=JwkCurveType.ED448,
+        result = OKPJWK(
+            kty=JWKKeyType.OKP,
+            crv=JWKCurveType.ED448,
             x=__b64_from_bytes(ed448_pub),
             alg=algorithm,
             use=usage,
         )
     elif isinstance(key, ed25519.Ed25519PublicKey):
+        from .okp_jwk import OKPJWK
         ed25519_pub = key.public_bytes(
             encoding=serialization.Encoding.Raw,
             format=serialization.PublicFormat.Raw,
         )
-        result = OkpJwk(
-            kty=JwkKeyType.OKP,
-            crv=JwkCurveType.ED25519,
+        result = OKPJWK(
+            kty=JWKKeyType.OKP,
+            crv=JWKCurveType.ED25519,
             x=__b64_from_bytes(ed25519_pub),
             alg=algorithm,
             use=usage,
         )
     elif isinstance(key, ec.EllipticCurvePublicKey):
+        from .ec_jwk import ECJWK
         ec_pub = key.public_numbers()
-        result = EcJwk(
-            kty=JwkKeyType.EC,
-            crv=JwkCurveType.P256 if key.curve.name == 'secp256r1' else JwkCurveType.P384 if key.curve.name == 'secp384r1' else JwkCurveType.P521,
+        result = ECJWK(
+            kty=JWKKeyType.EC,
+            crv=JWKCurveType.P256 if key.curve.name == 'secp256r1' else JWKCurveType.P384 if key.curve.name == 'secp384r1' else JWKCurveType.P521,
             x=__b64_from_int(ec_pub.x),
             y=__b64_from_int(ec_pub.y),
             alg=algorithm,
             use=usage,
         )
     elif isinstance(key, rsa.RSAPublicKey):
+        from .rsa_jwk import RSAJWK
         rsa_pub = key.public_numbers()
-        result = RsaJwk(
-            kty=JwkKeyType.RSA,
+        result = RSAJWK(
+            kty=JWKKeyType.RSA,
             n=__b64_from_int(rsa_pub.n),
             e=__b64_from_int(rsa_pub.e),
             alg=algorithm,
@@ -283,21 +223,23 @@ def from_public_key(
     return result
 
 
-def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed25519.Ed25519PublicKey | ed448.Ed448PublicKey:
-    match JwkKeyType(jwk['kty']):
-        case JwkKeyType.RSA:
-            rsa_jwk = cast(RsaJwk, jwk)
+def to_public_key(jwk: JWK) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed25519.Ed25519PublicKey | ed448.Ed448PublicKey:
+    match JWKKeyType(jwk['kty']):
+        case JWKKeyType.RSA:
+            from .rsa_jwk import RSAJWK
+            rsa_jwk = cast(RSAJWK, jwk)
             rsa_pub = rsa.RSAPublicNumbers(
                 e=__b64_to_int(rsa_jwk['e']),
                 n=__b64_to_int(rsa_jwk['n'])
             )
             return rsa_pub.public_key()
-        case JwkKeyType.EC:
-            ec_jwk = cast(EcJwk, jwk)
+        case JWKKeyType.EC:
+            from .ec_jwk import ECJWK
+            ec_jwk = cast(ECJWK, jwk)
             curve = {
-                JwkCurveType.P256: ec.SECP256R1(),
-                JwkCurveType.P384: ec.SECP384R1(),
-                JwkCurveType.P521: ec.SECP521R1(),
+                JWKCurveType.P256: ec.SECP256R1(),
+                JWKCurveType.P384: ec.SECP384R1(),
+                JWKCurveType.P521: ec.SECP521R1(),
             }[ec_jwk['crv']]
             ec_pub = ec.EllipticCurvePublicNumbers(
                 x=__b64_to_int(ec_jwk['x']),
@@ -305,13 +247,14 @@ def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed
                 curve=curve
             )
             return ec_pub.public_key()
-        case JwkKeyType.OKP:
-            okp_jwk = cast(OkpJwk, jwk)
+        case JWKKeyType.OKP:
+            from .okp_jwk import OKPJWK
+            okp_jwk = cast(OKPJWK, jwk)
             key_bytes = __b64_to_bytes(okp_jwk['x'])
-            match JwkCurveType(okp_jwk['crv']):
-                case JwkCurveType.ED25519:
+            match JWKCurveType(okp_jwk['crv']):
+                case JWKCurveType.ED25519:
                     return ed25519.Ed25519PublicKey.from_public_bytes(key_bytes)
-                case JwkCurveType.ED448:
+                case JWKCurveType.ED448:
                     return ed448.Ed448PublicKey.from_public_bytes(key_bytes)
                 case _:
                     raise ValueError('Unsupported OKP Curve Type')
@@ -322,13 +265,14 @@ def to_public_key(jwk: Jwk) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed
 def from_symmetric_key(
     algorithm: Algorithm,
     key: bytes | str,
-    usage: JwkUsageType = JwkUsageType.SIG,
+    usage: JWKUsageType = JWKUsageType.SIG,
     key_id: Optional[str] = None
-) -> OctetJwk:
+) -> JWK:
+    from .octet_jwk import OctetJWK
     if isinstance(key, str):
         key = key.encode('utf-8')
-    result = OctetJwk(
-        kty=JwkKeyType.OCT,
+    result = OctetJWK(
+        kty=JWKKeyType.OCT,
         k=__b64_from_bytes(key),
         alg=algorithm,
         use=usage
@@ -338,23 +282,18 @@ def from_symmetric_key(
     return result
 
 
-def to_symmetric_key(jwk: OctetJwk) -> bytes:
-    if jwk['kty'] != JwkKeyType.OCT:
+def to_symmetric_key(jwk: JWK) -> bytes:
+    if jwk['kty'] != JWKKeyType.OCT:
         raise ValueError('Unsupported Key Type')
     else:
         return __b64_to_bytes(jwk['k'])
 
 
 __all__ = [
-    'JwkUsageType',
-    'JwkKeyType',
-    'JwkCurveType',
-    'RsaJwk',
-    'EcJwk',
-    'OkpJwk',
-    'OctetJwk',
-    'Jwk',
-    'from_private_key', 'to_private_key',
-    'from_public_key', 'to_public_key',
-    'from_symmetric_key', 'to_symmetric_key'
+    'from_private_key',
+    'from_public_key',
+    'from_symmetric_key',
+    'to_private_key',
+    'to_public_key',
+    'to_symmetric_key'
 ]

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2026 Shaun Wilson
 # SPDX-License-Identifier: MIT
 
-from .Algorithm import Algorithm
+from .algorithm import Algorithm
 
 __version__ = '0.0.0'
 __commit__ = '0abc123'

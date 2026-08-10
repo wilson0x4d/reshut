@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, Optional, cast
+from typing import Any, Mapping, Optional, cast
 
 import falcon
 from punit import fact, exceptions
-from reshut.middleware.AuthorizationEvaluator import AuthorizationEvaluator
-from reshut.middleware.TokenEvaluator import TokenEvaluator
+from reshut.middleware import AuthorizationEvaluator
+from reshut.middleware import TokenEvaluator
 
 
 class _DummyRequest:
@@ -38,11 +38,11 @@ class _StubTokenEvaluator(TokenEvaluator):
     def evaluate(
         self,
         token: str,
-        deny: list[tuple[str, Any]],
-        allow: list[tuple[str, Any]],
-        require: list[tuple[str, Any]],
+        deny_claims: list[tuple[str, Any]],
+        allow_claims: list[tuple[str, Any]],
+        require_claims: list[tuple[str, Any]],
     ) -> bool:
-        self.__calls.append((token, deny, allow, require))
+        self.__calls.append((token, deny_claims, allow_claims, require_claims))
         return self.__result
 
     @property

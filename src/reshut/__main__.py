@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import sys
 from typing import cast
-from .jwk import Jwk
+from .jwk import JWK
 from .utils import Algorithm, keygen, tokenize, validate
 
 
@@ -45,14 +45,14 @@ def __cmd_tokenize(args: argparse.Namespace) -> None:
         sys.stderr.write('Claims must be a JSON object.\n')
         raise SystemExit(5) from exc
     key_json = __read_key_file(Path(args.key))
-    key = cast(Jwk, json.loads(key_json))
+    key = cast(JWK, json.loads(key_json))
     token = tokenize(key, claims)
     print(token)
 
 
 def __cmd_validate(args: argparse.Namespace) -> None:
     key_json = __read_key_file(Path(args.key))
-    key = cast(Jwk, json.loads(key_json))
+    key = cast(JWK, json.loads(key_json))
     try:
         claims = validate(key, args.token)
         print(json.dumps(claims, indent=2, sort_keys=True))

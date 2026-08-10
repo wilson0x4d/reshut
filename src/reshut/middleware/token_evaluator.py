@@ -5,7 +5,7 @@ import falcon
 from typing import Any, cast
 
 from ..authorization import ClaimEvaluator
-from ..jwk import Jwk
+from ..jwk import JWK
 from ..utils import validate
 
 
@@ -14,9 +14,9 @@ class TokenEvaluator:
     Evaluates a token given an Algorithm and Key.
     """
 
-    __key: Jwk
+    __key: JWK
 
-    def __init__(self, key: Jwk) -> None:
+    def __init__(self, key: JWK) -> None:
         self.__key = key
 
     def evaluate(
