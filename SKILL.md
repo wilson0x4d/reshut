@@ -55,6 +55,7 @@ When multiple decorator rules apply to the same handler, they are evaluated in a
 
 Each decorator takes `claim_name` and optional `claim_check`:
 
+- **`None`** — claim just needs to be present in the token, any value accepts: `@allow_claim("authenticated")`
 - **Literal value** — exact match: `@require_claim("role", "admin")`
 - **Callable** (`ClaimEvaluator = Callable[[Any], bool]`) — custom logic:
   ```python
@@ -106,7 +107,7 @@ def allow_claim(claim_name: str, claim_check: ClaimEvaluator | Any | None = None
 
 def deny_claim(claim_name: str, claim_check: ClaimEvaluator | Any | None = None) -> Callable[[DecoratedT], DecoratedT]: ...
 
-def require_claim(claim_name: str, claim_check: Any) -> Callable[[DecoratedT], DecoratedT]: ...
+def require_claim(claim_name: str, claim_check: ClaimEvaluator | Any | None = None) -> Callable[[DecoratedT], DecoratedT]: ...
 ```
 
 `claim_name` is always the first (and only required) positional argument. `claim_check` is the second positional argument and may be `None`, a literal value, or a `ClaimEvaluator` callable. Setting `is_required=True` on `allow_claim` upgrades it to REQUIRED logic (equivalent to `require_claim`).

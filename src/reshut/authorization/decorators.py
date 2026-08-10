@@ -45,7 +45,7 @@ def allow_claim(
 
     :param func: The handler function.
     :param claim_name: Claim name.
-    :param claim_check: Optional literal value that the claim must present, or a ``ClaimEvaluator`` that checks the claim is a match.
+    :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value requires an exact match. A ``ClaimEvaluator`` callable is invoked with the claim value.
     :param is_required: Optional boolean indicating that the claim is required, forming a "REQUIRED claim rule".
     :return: The handler function (not wrapped.)
     """
@@ -82,7 +82,7 @@ def deny_claim(
 
     :param func: The handler function.
     :param claim_name: Claim name.
-    :param claim_check: Optional literal value that the claim must NOT present, or a ``ClaimEvaluator`` that checks the claim is a match.
+    :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value blocks if matched exactly. A ``ClaimEvaluator`` callable is invoked with the claim value.
     :return: The handler function (not wrapped.)
     """
     org = inspect.unwrap(func)
@@ -117,7 +117,7 @@ def require_claim(
 
     :param func: The handler function.
     :param claim_name: Claim name.
-    :param claim_check: Optional literal value that the claim must present, or a ``ClaimEvaluator`` that checks the claim is a match.
+    :param claim_check: Optional claim check. ``None`` means the claim only needs to be present (any value). A literal value requires an exact match. A ``ClaimEvaluator`` callable is invoked with the claim value.
     :return: The handler function (not wrapped.)
     """
     return allow_claim(func, claim_name, claim_check, True)

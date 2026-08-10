@@ -49,7 +49,7 @@ class TokenEvaluator:
         # check for required claims (if any not present, access denied]
         for k, claim_check in require_claims:
             claim_value = claims.get(k, None)
-            if claim_value is None or (claim_value != claim_check and (not callable(claim_check) or not cast(ClaimEvaluator, claim_check)(claim_value))):
+            if claim_value is None or (claim_check is not None and (claim_value != claim_check and (not callable(claim_check) or not cast(ClaimEvaluator, claim_check)(claim_value)))):
                 # access denied
                 raise falcon.HTTPUnauthorized(
                     title='Authorization Missing',
@@ -59,7 +59,7 @@ class TokenEvaluator:
         if allow_claims:
             for k, claim_check in allow_claims:
                 claim_value = claims.get(k, None)
-                if claim_value is not None and (claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
+                if claim_value is not None and (claim_check is None or claim_value == claim_check or (callable(claim_check) and cast(ClaimEvaluator, claim_check)(claim_value))):
                     # access granted
                     return True
             # access denied

@@ -263,6 +263,108 @@ def deny_claim_same_name_multiple_checks_cumulative() -> None:
 
 
 @fact
+def allow_claim_check_none_present() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'fake_reader': 'any_value_at_all'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = [('fake_reader', None)]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
+
+    result = evaluator.evaluate(token, deny, allow, require)
+    assert result is True, 'ALLOW with check=None should match when claim is present'
+
+
+@fact
+def allow_claim_check_none_missing() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'other_claim': 'value'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = [('fake_reader', None)]
+    deny: list[tuple[str, Any]] = []
+    require: list[tuple[str, Any]] = []
+
+    try:
+        evaluator.evaluate(token, deny, allow, require)
+        assert False, 'Expected HTTPUnauthorized for missing ALLOW claim with check=None' # pragma: no cover
+    except falcon.HTTPUnauthorized as exc:
+        assert exc.description == 'ALLOW'
+        assert exc.title == 'Authorization Disallowed'
+
+
+@fact
+def deny_claim_check_none_present() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'blocked_claim': 'any_value'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = []
+    deny: list[tuple[str, Any]] = [('blocked_claim', None)]
+    require: list[tuple[str, Any]] = []
+
+    try:
+        evaluator.evaluate(token, deny, allow, require)
+        assert False, 'Expected HTTPUnauthorized for DENY with check=None and present claim' # pragma: no cover
+    except falcon.HTTPUnauthorized as exc:
+        assert exc.description == 'DENY'
+        assert exc.title == 'Authorization Denied'
+
+
+@fact
+def deny_claim_check_none_missing() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'other_claim': 'value'}
+
+    token = tokenize(secret, claims)
+
+    allow: list[tuple[str, Any]] = []
+    deny: list[tuple[str, Any]] = [('blocked_claim', None)]
+    require: list[tuple[str, Any]] = []
+
+    result = evaluator.evaluate(token, deny, allow, require)
+    assert result is True, 'DENY with check=None should not match when claim is absent'
+
+
+@fact
+def require_claim_check_none_present() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'some_role': 'anything_goes'}
+
+    token = tokenize(secret, claims)
+
+    require: list[tuple[str, Any]] = [('some_role', None)]
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
+
+    result = evaluator.evaluate(token, deny, allow, require)
+    assert result is True, 'REQUIRE with check=None should pass when claim is present'
+
+
+@fact
+def require_claim_check_none_missing() -> None:
+    evaluator, secret = __make_evaluator()
+    claims = {'other_claim': 'value'}
+
+    token = tokenize(secret, claims)
+
+    require: list[tuple[str, Any]] = [('some_role', None)]
+    deny: list[tuple[str, Any]] = []
+    allow: list[tuple[str, Any]] = []
+
+    try:
+        evaluator.evaluate(token, deny, allow, require)
+        assert False, 'Expected HTTPUnauthorized for missing REQUIRE claim with check=None' # pragma: no cover
+    except falcon.HTTPUnauthorized as exc:
+        assert exc.description == 'REQUIRE'
+        assert exc.title == 'Authorization Missing'
+
+
+@fact
 def require_claim_multiple_claims_any_match() -> None:
     evaluator, secret = __make_evaluator()
     claims = {'role': 'admin', 'user': 'bob'}
