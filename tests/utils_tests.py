@@ -4,6 +4,7 @@
 from datetime import datetime, timedelta, timezone
 import uuid
 from punit import fact, theory, inlinedata, collections, exceptions
+import falcon
 from reshut.jwk import JWK
 from reshut.utils import Algorithm, keygen, tokenize, validate
 from typing import cast
@@ -63,7 +64,7 @@ def tokenize_when_mismatched_audience_then_raise_Exception() -> None:
     key = keygen(Algorithm.HS256)
     token = tokenize(key, { 'foo': 'bar'}, audience=expected_value)
     claims = validate(key, token)
-    assert exceptions.raises[Exception](lambda: validate(key, token, audience='not-matching-audience'))
+    assert exceptions.raises[falcon.HTTPUnauthorized](lambda: validate(key, token, audience='not-matching-audience'))
 
 
 @fact
@@ -72,7 +73,7 @@ def tokenize_when_mismatched_issuer_then_raise_Exception() -> None:
     key = keygen(Algorithm.HS256)
     token = tokenize(key, { 'foo': 'bar'}, issuer=expected_value)
     claims = validate(key, token)
-    assert exceptions.raises[Exception](lambda: validate(key, token, issuer='not-matching-issuer'))
+    assert exceptions.raises[falcon.HTTPUnauthorized](lambda: validate(key, token, issuer='not-matching-issuer'))
 
 
 @fact
@@ -81,14 +82,14 @@ def tokenize_when_mismatched_subject_then_raise_Exception() -> None:
     key = keygen(Algorithm.HS256)
     token = tokenize(key, { 'foo': 'bar'}, subject=expected_value)
     claims = validate(key, token)
-    assert exceptions.raises[Exception](lambda: validate(key, token, subject='not-matching-audience'))
+    assert exceptions.raises[falcon.HTTPUnauthorized](lambda: validate(key, token, subject='not-matching-audience'))
 
 
 @fact
 def tokenize_when_before_nbt_then_raise_Exception() -> None:
     key = keygen(Algorithm.HS256)
     token = tokenize(key, { 'foo': 'bar'}, not_before=int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp()))
-    assert exceptions.raises[Exception](lambda: validate(key, token))
+    assert exceptions.raises[falcon.HTTPUnauthorized](lambda: validate(key, token))
 
 
 @fact

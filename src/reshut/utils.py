@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, ed448, rsa
+import falcon
 import jwt
 from jwt.types import Options
 import secrets
@@ -174,7 +175,7 @@ def validate(
     :param issuer:      Expected ``iss`` claim. Omit to skip validating ``iss`` claim.
     :param subject:     Expected ``sub`` claim. Omit to skip validating ``sub`` claim.
     :return:            The decoded claims (as a ``dict``).
-    :raises Exception:  If the token is invalid, fails standards-enforcement, or claims do not match expected values.
+    :raises falcon.HTTPUnauthorized:  If the token is invalid, fails standards-enforcement, or claims do not match expected values.
     """
     tsnow = int(time.time())
     options = Options(
@@ -192,28 +193,31 @@ def validate(
     )
     claims: dict[str, Any]
     algorithm = Algorithm(key['alg'])
-    match algorithm:
-        case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
-            return jwt.decode(token, to_public_key(cast(ECJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
-        case Algorithm.ED25519 | Algorithm.ED448:
-            claims = jwt.decode(token, to_public_key(cast(OKPJWK, key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
-        case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            claims = jwt.decode(token, to_symmetric_key(cast(OctetJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
-        case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
-            claims = jwt.decode(token, to_public_key(cast(RSAJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+    try:
+        match algorithm:
+            case Algorithm.ES256 | Algorithm.ES384 | Algorithm.ES512:
+                claims = jwt.decode(token, to_public_key(cast(ECJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+            case Algorithm.ED25519 | Algorithm.ED448:
+                claims = jwt.decode(token, to_public_key(cast(OKPJWK, key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
+            case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
+                claims = jwt.decode(token, to_symmetric_key(cast(OctetJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+            case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
+                claims = jwt.decode(token, to_public_key(cast(RSAJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+    except jwt.InvalidTokenError as e:
+        raise falcon.HTTPUnauthorized(title='Unauthorized', description=str(e)) from e
     if audience is not None:
         aud = claims.get('aud', None)
         if aud is None or (isinstance(aud, list) and audience not in aud) or aud != audience:
-            raise Exception('audience is incorrect.')
+            raise falcon.HTTPUnauthorized(title='Unauthorized', description='audience is incorrect.')
     if issuer is not None and claims.get('iss', None) != issuer:
-        raise Exception('issuer is incorrect.')
+        raise falcon.HTTPUnauthorized(title='Unauthorized', description='issuer is incorrect.')
     if subject is not None and claims.get('sub', None) != subject:
-        raise Exception('subject is incorrect.')
+        raise falcon.HTTPUnauthorized(title='Unauthorized', description='subject is incorrect.')
     if enforce:
         if claims.get('nbf', tsnow) > tsnow:
-            raise Exception('token cannot be used yet (nbf check failed)')
+            raise falcon.HTTPUnauthorized(title='Unauthorized', description='token cannot be used yet (nbf check failed)')
         if claims.get('exp', tsnow) < tsnow:
-            raise Exception('token has expired (exp check failed)')
+            raise falcon.HTTPUnauthorized(title='Unauthorized', description='token has expired (exp check failed)')
     return claims
 
 
