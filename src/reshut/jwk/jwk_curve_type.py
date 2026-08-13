@@ -12,5 +12,11 @@ class JWKCurveType(StrEnum):
     ED25519 = 'Ed25519'
     ED448 = 'Ed448'
 
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}.{self.name}'
+
+    def __str__(self) -> str:
+        return self.value
+
 
 __all__ = ['JWKCurveType']

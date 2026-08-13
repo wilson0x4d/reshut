@@ -32,6 +32,10 @@ class Algorithm(StrEnum):
     ES512 = 'ES512'
     ED25519 = 'ED25519'
     ED448 = 'ED448'
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}.{self.name}'
+
     def __str__(self) -> str:
         return self.value
 
