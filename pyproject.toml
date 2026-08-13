@@ -20,7 +20,7 @@ dependencies = [
     "pyjwt[crypto] (>=2.12.1)"
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "build",
     "coverage",
