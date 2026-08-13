@@ -224,8 +224,8 @@ match jwk:
 | `to_private_key(jwk)` | JWK → cryptography private key |
 | `from_public_key(algorithm, key, *, usage, key_id)` | cryptography public key → JWK |
 | `to_public_key(jwk)` | JWK → cryptography public key |
-| `from_symmetric_key(algorithm, key, *, usage, key_id)` | bytes/string → OctetJWK |
-| `to_symmetric_key(jwk)` | OctetJWK → raw bytes |
+| `from_symmetric_key_bytes(algorithm, key, *, usage, key_id)` | bytes/string → OctetJWK |
+| `to_symmetric_key_bytes(jwk)` | OctetJWK → raw bytes |
 
 ```python
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -474,7 +474,7 @@ src/reshut/
 | `reshut.algorithm` | `Algorithm` (StrEnum, 11 members) |
 | `reshut.authorization` | `ClaimEvaluator`, `allow_anonymous`, `allow_claim`, `deny_claim`, `require_claim` |
 | `reshut.jwk` | `JWKUsageType`, `JWKKeyType`, `JWKCurveType`, `RSAJWK`, `ECJWK`, `OKPJWK`, `OctetJWK`, `JWK`, `utils` |
-| `reshut.jwk.utils` | `from_private_key`, `to_private_key`, `from_public_key`, `to_public_key`, `from_symmetric_key`, `to_symmetric_key` |
+| `reshut.jwk.utils` | `from_private_key`, `to_private_key`, `from_public_key`, `to_public_key`, `from_symmetric_key_bytes`, `to_symmetric_key_bytes` |
 | `reshut.utils` | `keygen`, `tokenize`, `validate` |
 | `reshut.middleware` | `ASGIAuthorizationMiddleware`, `AuthorizationEvaluator`, `TokenEvaluator`, `WSGIAuthorizationMiddleware` |
 | `reshut.middleware.ASGIAuthorizationMiddleware` | `ASGIAuthorizationMiddleware` |

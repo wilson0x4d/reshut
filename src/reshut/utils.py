@@ -11,7 +11,7 @@ from typing import Any, Optional, cast
 
 from .algorithm import Algorithm
 from .jwk import JWK, ECJWK, OctetJWK, OKPJWK, RSAJWK
-from .jwk.utils import from_private_key, from_symmetric_key, to_private_key, to_public_key, to_symmetric_key
+from .jwk.utils import from_private_key, from_symmetric_key_bytes, to_private_key, to_public_key, to_symmetric_key_bytes
 
 
 def keygen(algorithm: Algorithm, key_size: Optional[int] = None) -> JWK:
@@ -33,7 +33,7 @@ def keygen(algorithm: Algorithm, key_size: Optional[int] = None) -> JWK:
                         key_size = 384
                     case Algorithm.HS512:
                         key_size = 512
-            return from_symmetric_key(
+            return from_symmetric_key_bytes(
                 algorithm,
                 secrets.token_bytes(key_size)
             )
@@ -147,7 +147,7 @@ def tokenize(
         case Algorithm.ED25519 | Algorithm.ED448:
             return jwt.encode(claims, to_private_key(cast(OKPJWK, key)), 'EdDSA')
         case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-            return jwt.encode(claims, to_symmetric_key(cast(OctetJWK, key)), algorithm.value)
+            return jwt.encode(claims, to_symmetric_key_bytes(cast(OctetJWK, key)), algorithm.value)
         case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
             return jwt.encode(claims, to_private_key(cast(RSAJWK, key)), algorithm.value)
 
@@ -200,7 +200,7 @@ def validate(
             case Algorithm.ED25519 | Algorithm.ED448:
                 claims = jwt.decode(token, to_public_key(cast(OKPJWK, key)), algorithms=['EdDSA'], audience=audience, issuer=issuer, subject=subject, options=options)
             case Algorithm.HS256 | Algorithm.HS384 | Algorithm.HS512:
-                claims = jwt.decode(token, to_symmetric_key(cast(OctetJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
+                claims = jwt.decode(token, to_symmetric_key_bytes(cast(OctetJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
             case Algorithm.RS256 | Algorithm.RS384 | Algorithm.RS512:
                 claims = jwt.decode(token, to_public_key(cast(RSAJWK, key)), algorithms=[algorithm.value], audience=audience, issuer=issuer, subject=subject, options=options)
     except jwt.InvalidTokenError as e:

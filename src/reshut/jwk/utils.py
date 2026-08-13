@@ -262,15 +262,18 @@ def to_public_key(jwk: JWK) -> rsa.RSAPublicKey | ec.EllipticCurvePublicKey | ed
             raise ValueError('Unsupported JWK')
 
 
-def from_symmetric_key(
+def from_symmetric_key_bytes(
     algorithm: Algorithm,
-    key: bytes | str,
+    key: bytes,
     usage: JWKUsageType = JWKUsageType.SIG,
     key_id: Optional[str] = None
 ) -> JWK:
+    """
+    Generates a JWK from raw key bytes.
+
+    Consumer is unlikely to use this utility function, it exists for internal purposes.
+    """
     from .octet_jwk import OctetJWK
-    if isinstance(key, str):
-        key = key.encode('utf-8')
     result = OctetJWK(
         kty=JWKKeyType.OCT,
         k=__b64_from_bytes(key),
@@ -282,7 +285,12 @@ def from_symmetric_key(
     return result
 
 
-def to_symmetric_key(jwk: JWK) -> bytes:
+def to_symmetric_key_bytes(jwk: JWK) -> bytes:
+    """
+    Retrieves the raw key bytes for a symmetric JWK.
+
+    Consumer is unlikely to use this utility function, it exists for internal purposes.
+    """
     if jwk['kty'] != JWKKeyType.OCT:
         raise ValueError('Unsupported Key Type')
     else:
@@ -292,8 +300,8 @@ def to_symmetric_key(jwk: JWK) -> bytes:
 __all__ = [
     'from_private_key',
     'from_public_key',
-    'from_symmetric_key',
+    'from_symmetric_key_bytes',
     'to_private_key',
     'to_public_key',
-    'to_symmetric_key'
+    'to_symmetric_key_bytes'
 ]
